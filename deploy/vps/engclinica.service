@@ -1,0 +1,16 @@
+[Unit]
+Description=Engenharia Clinica Streamlit App
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/analise-dados-app
+Environment=ENG_CLINICA_EXTERNAL=1
+Environment=ENG_CLINICA_PORT=3001
+ExecStart=/opt/analise-dados-app/.venv/bin/python run_app.py
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target

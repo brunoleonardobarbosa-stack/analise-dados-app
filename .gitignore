@@ -1,0 +1,30 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# PyInstaller build
+build/
+dist/
+*.spec
+
+# Logs
+*.log
+build_log.txt
+
+# Deploy artifacts
+deploy_package.tgz
+
+# Tunnel/runtime temp
+ultima_url_web.txt
+cf_stderr.log
+cf_stdout.log
+lt_stderr.log
+lt_stdout.log
+exe_*.log
+
+# IDE
+.vscode/

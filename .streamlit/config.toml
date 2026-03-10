@@ -1,0 +1,18 @@
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+
+[ui]
+hideTopBar = true
+
+[server]
+enableCORS = true
+enableXsrfProtection = true
+headless = true
+runOnSave = true
+fileWatcherType = "poll"
+
+[theme]
+base = "light"
