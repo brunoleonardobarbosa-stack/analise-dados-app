@@ -183,6 +183,48 @@ cloudflared tunnel login
 cloudflared tunnel create engclinica
 ```
 
+## Ambientes: Teste e Trabalho
+
+O projeto usa duas branches Git para separar desenvolvimento de producao:
+
+| Ambiente   | Branch | Porta | Script                  |
+|------------|--------|-------|-------------------------|
+| **Teste**  | `dev`  | 3002  | `.\start_teste.ps1`    |
+| **Trabalho** | `main` | 3001 | `.\start_trabalho.ps1` |
+
+### Fluxo de trabalho
+
+1. **Desenvolver/testar** — trabalhe na branch `dev` e rode o ambiente de teste:
+
+```powershell
+.\start_teste.ps1
+```
+
+O app de teste abre na porta **3002** com tema laranja para diferenciar visualmente.
+
+2. **Commitar alteracoes** na branch `dev`:
+
+```powershell
+git add -A
+git commit -m "descricao da melhoria"
+```
+
+3. **Promover para producao** quando estiver validado:
+
+```powershell
+.\promover_teste.ps1
+```
+
+O script faz merge da `dev` na `main` com confirmacao e volta para `dev`.
+
+4. **Subir o ambiente de trabalho** atualizado:
+
+```powershell
+.\start_trabalho.ps1
+```
+
+> Os dois ambientes podem rodar **ao mesmo tempo** em portas diferentes.
+
 ## Publicar como site na VPS (Hostinger)
 
 Arquivos prontos de deploy foram adicionados em `deploy/vps/`:
