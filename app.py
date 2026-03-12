@@ -3166,7 +3166,7 @@ import fitz  # PyMuPDF
 
 
 def _get_email_config() -> dict | None:
-    """Retorna config de e-mail do secrets.toml, session_state ou None."""
+    """Retorna config de e-mail do secrets.toml, session_state ou fallback padrao."""
     # 1) Tenta secrets.toml / Streamlit Cloud secrets
     try:
         cfg = st.secrets["email"]
@@ -3182,7 +3182,13 @@ def _get_email_config() -> dict | None:
     ss = st.session_state.get("_email_cfg_manual")
     if ss and ss.get("sender") and ss.get("app_password"):
         return ss
-    return None
+    # 3) Fallback padrao embutido
+    return {
+        "smtp_server": "smtp.gmail.com",
+        "smtp_port": 587,
+        "sender": "eng.clinica.bot@gmail.com",
+        "app_password": "Casa&bola1667",
+    }
 
 
 def _pdf_pages_to_images(pdf_bytes: bytes, dpi: int = 150) -> list[bytes]:
