@@ -3942,7 +3942,7 @@ def main() -> None:
         # ── Envio de e-mail ──
         # Mapeamento automatico: padrao no nome do quadro → destinatarios
         _EMAIL_MAP = {
-            "D969": "Bruno.barbosa@dasa.com.br",
+            "D969": "bruno.barbosa@dasa.com.br, yasmim.maria@dasa.com.br, claudemir.cruz@dasa.com.br, manfred.rees@dasa.com.br, daniele.aguiar@dasa.com.br, suzy.santos@dasa.com.br",
         }
 
         def _resolve_default_dest(quadros: list[str]) -> str:
