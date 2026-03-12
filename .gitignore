@@ -26,5 +26,8 @@ lt_stderr.log
 lt_stdout.log
 exe_*.log
 
+# Secrets
+.streamlit/secrets.toml
+
 # IDE
 .vscode/
