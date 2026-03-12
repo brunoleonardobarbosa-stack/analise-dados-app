@@ -1392,68 +1392,6 @@ def open_calls_table(df: pd.DataFrame) -> pd.DataFrame:
     return result.sort_values(by="Tipo de Equipamento", ascending=True, kind="stable")
 
 
-def closed_calls_table(df: pd.DataFrame) -> pd.DataFrame:
-    status_norm = df["STATUS"].map(normalize_status)
-    fechados = df[status_norm == "FECHADO"].copy()
-
-    if "DATA_FECHAMENTO" in fechados.columns and not fechados.empty:
-        fechados["DIAS_RESOLUCAO"] = (fechados["DATA_FECHAMENTO"] - fechados["DATA_ABERTURA"]).dt.days
-    else:
-        fechados["DIAS_RESOLUCAO"] = 0
-    fechados["DIAS_RESOLUCAO"] = pd.to_numeric(fechados["DIAS_RESOLUCAO"], errors="coerce").fillna(0).clip(lower=0).astype(int)
-
-    ticket_number_col = resolve_ticket_number_column(fechados)
-    fechados["NUMERO_CHAMADO_OUT"] = (
-        fechados[ticket_number_col].astype("string").fillna("-") if ticket_number_col else "-"
-    )
-
-    requester_col = resolve_requester_column(fechados)
-    fechados["SOLICITANTE_OUT"] = (
-        fechados[requester_col].astype("string").fillna("-") if requester_col else "-"
-    )
-
-    observation_col = resolve_observation_column(fechados)
-    fechados["OBSERVACAO_OUT"] = (
-        fechados[observation_col].astype("string").fillna("-") if observation_col else "-"
-    )
-
-    def _fmt_date(s: pd.Series) -> pd.Series:
-        return s.dt.strftime("%d/%m/%Y").fillna("-") if not s.empty else pd.Series(dtype="object")
-
-    fechados["DATA_ABERTURA_FMT"] = _fmt_date(fechados["DATA_ABERTURA"])
-    if "DATA_FECHAMENTO" in fechados.columns:
-        fechados["DATA_FECHAMENTO_FMT"] = _fmt_date(fechados["DATA_FECHAMENTO"])
-    else:
-        fechados["DATA_FECHAMENTO_FMT"] = "-"
-
-    cols_out = [
-        "QUADRO", "REGIAO", "NUMERO_CHAMADO_OUT", "TIPO_EQUIPAMENTO", "TAG",
-        "MODELO", "FABRICANTE", "SOLICITANTE_OUT", "FALHA", "CRITICIDADE",
-        "DATA_ABERTURA_FMT", "DATA_FECHAMENTO_FMT", "DIAS_RESOLUCAO", "OBSERVACAO_OUT",
-    ]
-    cols_present = [c for c in cols_out if c in fechados.columns]
-
-    rename_map = {
-        "QUADRO": "Quadro de Trabalho",
-        "REGIAO": "Regiao",
-        "NUMERO_CHAMADO_OUT": "Numero do Chamado",
-        "TIPO_EQUIPAMENTO": "Tipo de Equipamento",
-        "TAG": "TAG",
-        "MODELO": "Modelo",
-        "FABRICANTE": "Fabricante",
-        "SOLICITANTE_OUT": "Solicitante",
-        "FALHA": "Falha",
-        "CRITICIDADE": "Criticidade",
-        "DATA_ABERTURA_FMT": "Data Abertura",
-        "DATA_FECHAMENTO_FMT": "Data Fechamento",
-        "DIAS_RESOLUCAO": "Dias para Resolver",
-        "OBSERVACAO_OUT": "Observacao",
-    }
-
-    result = fechados[cols_present].rename(columns=rename_map)
-    return result.sort_values(by="Dias para Resolver", ascending=False, kind="stable")
-
-
 def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.DataFrame) -> None:
     st.markdown(
         """
@@ -2646,36 +2584,6 @@ def render_risk_panel(metrics: dict[str, int | float | str | None], aging_df: pd
         unsafe_allow_html=True,
     )
     st.markdown("</div>", unsafe_allow_html=True)
-
-
-def build_priority_table(df: pd.DataFrame) -> pd.DataFrame:
-    status_norm = df["STATUS"].map(normalize_status)
-    abertos = df[status_norm == "ABERTO"].copy()
-    if abertos.empty:
-        return pd.DataFrame(columns=["Quadro de Trabalho", "Abertos", "Alta Criticidade", "Backlog >30 dias"])
-
-    today = pd.Timestamp.now().normalize()
-    abertos["DIAS_PARADO"] = (today - abertos["DATA_ABERTURA"]).dt.days
-    abertos["DIAS_PARADO"] = abertos["DIAS_PARADO"].fillna(0).clip(lower=0)
-
-    resumo = (
-        abertos.groupby("QUADRO", as_index=False)
-        .agg(
-            Abertos=("QUADRO", "size"),
-            AltaCrit=("CRITICIDADE", lambda s: int((s == "ALTA").sum())),
-            Backlog30=("DIAS_PARADO", lambda s: int((s > 30).sum())),
-        )
-        .sort_values(by=["AltaCrit", "Backlog30", "Abertos"], ascending=False, kind="stable")
-        .head(8)
-        .rename(
-            columns={
-                "QUADRO": "Quadro de Trabalho",
-                "AltaCrit": "Alta Criticidade",
-                "Backlog30": "Backlog >30 dias",
-            }
-        )
-    )
-    return resumo
 
 
 def build_recommended_actions(metrics: dict[str, int | float | str | None], aging_df: pd.DataFrame) -> list[str]:
@@ -4203,94 +4111,16 @@ def main() -> None:
 
         st.markdown("---")
 
-        # ── Painel de Alertas ──
-        st.markdown("### Painel de Alertas")
-        alertas_html = "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0.8rem;'>"
-        for alerta in diag["alertas"]:
-            icone = _ia_icone_severidade(alerta["severidade"])
-            bg = {"CRITICO": "#fef2f2", "ATENCAO": "#fffbeb", "OK": "#f0fdf4"}.get(alerta["severidade"], "#f8fafc")
-            border = {"CRITICO": "#fca5a5", "ATENCAO": "#fde68a", "OK": "#86efac"}.get(alerta["severidade"], "#e2e8f0")
-            alertas_html += (
-                f"<div style='background:{bg};border:1px solid {border};border-radius:8px;padding:1rem;'>"
-                f"<div style='font-size:1.1rem;font-weight:700;'>{icone} {alerta['titulo']}</div>"
-                f"<div style='font-size:1.5rem;font-weight:900;margin:0.3rem 0;'>{alerta['valor']}</div>"
-                f"<div style='font-size:0.85rem;color:#64748b;'>{alerta['detalhe']}</div>"
-                f"</div>"
-            )
-        alertas_html += "</div>"
-        st.markdown(alertas_html, unsafe_allow_html=True)
-
-        st.markdown("---")
-
-        # ── Recomendações Priorizadas ──
-        st.markdown("### Recomendacoes Priorizadas")
-        prioridade_cores = {"URGENTE": "#ef4444", "ALTA": "#fb923c", "MEDIA": "#facc15", "INFO": "#3b82f6"}
-        for i, (prioridade, texto) in enumerate(diag["recomendacoes"], 1):
-            cor = prioridade_cores.get(prioridade, "#64748b")
-            st.markdown(
-                f"<div style='display:flex;align-items:flex-start;gap:0.8rem;margin-bottom:0.6rem;'>"
-                f"<span style='background:{cor};color:#fff;font-weight:800;font-size:0.75rem;padding:0.25rem 0.6rem;border-radius:4px;white-space:nowrap;'>{prioridade}</span>"
-                f"<span style='font-size:0.95rem;'>{texto}</span>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-
-        st.markdown("---")
-
-        col_ia1, col_ia2 = st.columns(2)
-
-        with col_ia1:
-            # ── Equipamentos Problemáticos ──
-            st.markdown("### Equipamentos Mais Demandados")
-            if diag["equip_problematicos"]:
-                eq_df = pd.DataFrame(diag["equip_problematicos"])
-                eq_df.columns = ["Modelo", "Fabricante", "Chamados", "Media Dias", "Alta Crit."]
-                st.dataframe(eq_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("Nenhum equipamento com chamados abertos.")
-
-        with col_ia2:
-            # ── Quadros Sobrecarregados ──
-            st.markdown("### Quadros Mais Sobrecarregados")
-            if diag["quadros_ranking"]:
-                qr_df = pd.DataFrame(diag["quadros_ranking"])
-                qr_df.columns = ["Quadro", "Abertos", "Media Dias", "Alta Crit."]
-                st.dataframe(qr_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("Nenhum quadro com chamados abertos.")
-
-        st.markdown("---")
-
-        # ── Top Falhas ──
-        st.markdown("### Top 5 Falhas Mais Recorrentes (Abertos)")
-        if diag["top_falhas"]:
-            falha_df = pd.DataFrame(diag["top_falhas"], columns=["Falha", "Quantidade"])
-            fig_falha_ia = px.bar(
-                falha_df.sort_values("Quantidade", ascending=True),
-                x="Quantidade", y="Falha", orientation="h", text_auto=True,
-                color_discrete_sequence=["#003B71"],
-            )
-            apply_dasa_plotly_theme(fig_falha_ia)
-            fig_falha_ia.update_layout(xaxis_title="Quantidade", yaxis_title="")
-            st.plotly_chart(fig_falha_ia, use_container_width=True, key="ia_top_falhas_chart")
+        # ── Quadros Sobrecarregados ──
+        st.markdown("### Quadros Mais Sobrecarregados")
+        if diag["quadros_ranking"]:
+            qr_df = pd.DataFrame(diag["quadros_ranking"])
+            qr_df.columns = ["Quadro", "Abertos", "Media Dias", "Alta Crit."]
+            st.dataframe(qr_df, use_container_width=True, hide_index=True)
         else:
-            st.info("Sem falhas registradas nos chamados abertos.")
+            st.info("Nenhum quadro com chamados abertos.")
 
-        # ── Métricas detalhadas ──
         st.markdown("---")
-        st.markdown("### Metricas Detalhadas")
-        m = diag["metricas"]
-        met_cols = st.columns(6)
-        met_labels = [
-            ("Abertos", str(m["abertos"])),
-            ("Fechados", str(m["fechados"])),
-            ("Cancelados", str(m["cancelados"])),
-            ("Backlog >30d", str(m["backlog_30"])),
-            ("MTTR", f"{int(m['mttr'])}d" if m["mttr"] else "N/A"),
-            ("Tx Fechamento", f"{m['taxa_fechamento']:.1f}%"),
-        ]
-        for col, (label, val) in zip(met_cols, met_labels):
-            col.metric(label, val)
 
         # ── Campo de Perguntas ──
         st.markdown("---")
