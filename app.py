@@ -117,12 +117,12 @@ def normalize_column_key(value: str) -> str:
 # ── Tema DASA unificado para Plotly ──
 DASA_PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(240,245,250,0.35)",
-    font=dict(family="'Segoe UI', system-ui, -apple-system, sans-serif", color="#1a3c5e", size=13),
+    plot_bgcolor="rgba(240,248,248,0.35)",
+    font=dict(family="'Segoe UI', system-ui, -apple-system, sans-serif", color="#1a3c4e", size=13),
     margin=dict(l=8, r=8, t=10, b=8),
-    xaxis=dict(gridcolor="rgba(0,59,113,0.08)", zerolinecolor="rgba(0,59,113,0.12)"),
-    yaxis=dict(gridcolor="rgba(0,59,113,0.08)", zerolinecolor="rgba(0,59,113,0.12)"),
-    colorway=["#003B71", "#FF6A13", "#1e63a9", "#e85d04", "#4a90c4", "#f4845f", "#7fb3d8", "#ff9a5c"],
+    xaxis=dict(gridcolor="rgba(10,139,141,0.08)", zerolinecolor="rgba(10,139,141,0.12)"),
+    yaxis=dict(gridcolor="rgba(10,139,141,0.08)", zerolinecolor="rgba(10,139,141,0.12)"),
+    colorway=["#0A8B8D", "#14A3A5", "#067375", "#5CC0C2", "#03585A", "#8DD8D9", "#024B4D", "#A8E4E5"],
 )
 
 
@@ -1398,19 +1398,17 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
         <style>
         .kpi-grid-card {
             border: 1px solid var(--ec-border);
-            border-radius: 16px;
+            border-radius: 10px;
             padding: 14px 16px;
-            background: linear-gradient(180deg, #ffffff 0%, var(--dasa-blue-pale) 100%);
-            box-shadow: 0 4px 16px rgba(0, 59, 113, 0.08);
+            background: #ffffff;
+            box-shadow: 0 2px 6px rgba(10,139,141,0.06);
             position: relative;
             overflow: hidden;
-            min-height: 100px;
-            animation: fadeInUp 0.5s ease-out;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 90px;
+            transition: all 0.25s ease;
         }
         .kpi-grid-card:hover {
-            transform: translateY(-4px) scale(1.01);
-            box-shadow: 0 12px 32px rgba(0, 59, 113, 0.16);
+            box-shadow: 0 4px 14px rgba(10,139,141,0.12);
         }
         .kpi-grid-card::before {
             content: "";
@@ -1418,28 +1416,19 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
             left: 0;
             top: 0;
             height: 100%;
-            width: 4px;
-            background: linear-gradient(180deg, var(--dasa-blue) 0%, var(--dasa-orange) 100%);
-        }
-        .kpi-grid-card::after {
-            content: "";
-            position: absolute;
-            right: 10px;
-            bottom: 10px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, rgba(0,59,113,0.04), rgba(255,106,19,0.06));
+            width: 3px;
+            background: var(--dasa-blue);
         }
         .kpi-grid-title {
-            font-size: 0.82rem;
-            color: #2d4a66;
+            font-size: 0.8rem;
+            color: #5a7a7a;
             margin-bottom: 5px;
-            font-weight: 800;
+            font-weight: 700;
             letter-spacing: 0.3px;
             display: flex;
             align-items: center;
             gap: 6px;
+            text-transform: uppercase;
         }
         .kpi-info-dot {
             display: inline-flex;
@@ -1448,34 +1437,31 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--dasa-blue-pale), #d4e4f7);
+            background: var(--dasa-blue-pale);
             border: 1.5px solid var(--dasa-blue-light);
             color: var(--dasa-blue);
             font-size: 11px;
             font-weight: 900;
             cursor: help;
             user-select: none;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
         .kpi-info-dot:hover {
             background: var(--dasa-blue);
             color: #ffffff;
             border-color: var(--dasa-blue);
-            transform: scale(1.2);
-            box-shadow: 0 2px 8px rgba(0,59,113,0.25);
         }
         .kpi-grid-value {
-            font-size: 1.55rem;
+            font-size: 1.5rem;
             color: var(--dasa-blue);
             font-weight: 900;
             line-height: 1.1;
-            text-shadow: 0 1px 2px rgba(0,59,113,0.1);
         }
         .kpi-grid-trend {
             margin-top: 6px;
             font-size: 0.78rem;
-            color: #d45500;
-            font-weight: 800;
+            color: #067375;
+            font-weight: 700;
         }
         .kpi-responsive-grid {
             display: grid;
@@ -1485,33 +1471,30 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
             margin: 4px 0 14px 0;
         }
         .dashboard-block {
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: #ffffff;
             border: 1px solid var(--ec-border);
-            border-radius: 14px;
+            border-radius: 10px;
             padding: 10px 12px;
-            box-shadow: 0 4px 12px rgba(0, 59, 113, 0.06);
-            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(10,139,141,0.05);
+            transition: all 0.25s ease;
         }
         .dashboard-block:hover {
-            box-shadow: 0 8px 24px rgba(0, 59, 113, 0.1);
+            box-shadow: 0 4px 12px rgba(10,139,141,0.1);
         }
 
         .upload-panel {
-            background: linear-gradient(135deg, #ffffff 0%, var(--dasa-blue-pale) 50%, var(--dasa-orange-pale) 100%);
+            background: #ffffff;
             border: 2px dashed var(--dasa-blue-light);
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 20px 20px;
-            box-shadow: 0 8px 24px rgba(0, 59, 113, 0.08);
+            box-shadow: 0 2px 8px rgba(10,139,141,0.06);
             margin-bottom: 8px;
-            animation: fadeInUp 0.6s ease-out;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             text-align: center;
         }
         .upload-panel:hover {
-            border-color: var(--dasa-orange);
-            box-shadow: 0 8px 28px rgba(255, 106, 19, 0.12);
+            border-color: var(--dasa-blue);
+            box-shadow: 0 4px 12px rgba(10,139,141,0.1);
         }
         .upload-panel h3 {
             margin: 0 0 4px 0;
@@ -1733,19 +1716,19 @@ def apply_executive_styles() -> None:
         }
 
         :root {
-            --dasa-blue: #003B71;
-            --dasa-blue-light: #1565C0;
-            --dasa-blue-pale: #e8f0fe;
-            --dasa-orange: #FF6A13;
-            --dasa-orange-light: #FF8F4C;
-            --dasa-orange-pale: #fff3eb;
-            --ec-bg: #f0f4f8;
-            --ec-bg-2: #e8edf5;
+            --dasa-blue: #0A8B8D;
+            --dasa-blue-light: #14A3A5;
+            --dasa-blue-pale: #e6f5f5;
+            --dasa-orange: #0E7C7B;
+            --dasa-orange-light: #5CC0C2;
+            --dasa-orange-pale: #eaf8f8;
+            --ec-bg: #f5f7fa;
+            --ec-bg-2: #edf1f5;
             --ec-panel: #ffffff;
-            --ec-panel-soft: #f8fbff;
-            --ec-border: #d0dae8;
-            --ec-title: #051225;
-            --ec-muted: #2d4a66;
+            --ec-panel-soft: #f8fbfb;
+            --ec-border: #d4e0e0;
+            --ec-title: #0a2e2f;
+            --ec-muted: #2d5050;
             --ec-accent: var(--dasa-blue);
             --ec-risk: #b91c1c;
             --ec-risk-bg: #fef2f2;
@@ -1757,10 +1740,7 @@ def apply_executive_styles() -> None:
 
         .stApp {
             font-family: "Segoe UI", "Inter", "Calibri", sans-serif;
-            background:
-                radial-gradient(900px 300px at 5% 0%, rgba(0,59,113,0.07) 0%, transparent 60%),
-                radial-gradient(700px 250px at 95% 0%, rgba(255,106,19,0.06) 0%, transparent 50%),
-                linear-gradient(180deg, var(--ec-bg) 0%, var(--ec-bg-2) 100%);
+            background: var(--ec-bg);
             margin-top: 0;
         }
 
@@ -1778,7 +1758,7 @@ def apply_executive_styles() -> None:
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--dasa-orange);
+            background: var(--dasa-blue);
         }
 
         .main .block-container {
@@ -1787,17 +1767,13 @@ def apply_executive_styles() -> None:
             animation: fadeIn 0.6s ease-out;
         }
 
-        /* ── Painéis (glassmorphism) ── */
+        /* ── Painéis (clean) ── */
         .ec-panel {
-            background: rgba(255, 255, 255, 0.82);
-            backdrop-filter: blur(12px) saturate(1.6);
-            -webkit-backdrop-filter: blur(12px) saturate(1.6);
-            border: 1px solid rgba(208, 218, 232, 0.65);
-            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid var(--ec-border);
+            border-radius: 12px;
             padding: 14px 16px;
-            box-shadow:
-                0 8px 32px rgba(0, 59, 113, 0.08),
-                inset 0 1px 0 rgba(255,255,255,0.7);
+            box-shadow: 0 2px 8px rgba(10,139,141,0.06);
             animation: fadeInUp 0.5s ease-out;
             position: relative;
             overflow: hidden;
@@ -1809,7 +1785,7 @@ def apply_executive_styles() -> None:
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, var(--dasa-blue) 0%, var(--dasa-orange) 100%);
+            background: var(--dasa-blue);
         }
 
         .ec-section-title {
@@ -1818,7 +1794,7 @@ def apply_executive_styles() -> None:
             font-size: 1.1rem;
             margin-bottom: 6px;
             letter-spacing: 0.3px;
-            text-shadow: 0 1px 2px rgba(0,59,113,0.08);
+            text-shadow: none;
         }
 
         .ec-section-subtitle {
@@ -1872,20 +1848,19 @@ def apply_executive_styles() -> None:
 
         /* ── Detail cards ── */
         .ec-detail-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+            background: #ffffff;
             border: 1px solid var(--ec-border);
             border-left: 4px solid var(--dasa-blue);
-            border-radius: 14px;
+            border-radius: 10px;
             padding: 12px 14px;
-            box-shadow: 0 4px 14px rgba(0, 59, 113, 0.06);
+            box-shadow: 0 2px 8px rgba(10,139,141,0.05);
             margin-bottom: 8px;
             animation: fadeInUp 0.4s ease-out;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s ease;
         }
         .ec-detail-card:hover {
-            transform: translateY(-3px) scale(1.005);
-            box-shadow: 0 12px 28px rgba(0, 59, 113, 0.14);
-            border-left-color: var(--dasa-orange);
+            box-shadow: 0 4px 16px rgba(10,139,141,0.12);
+            border-left-color: var(--dasa-blue-light);
         }
 
         .ec-detail-grid {
@@ -1897,11 +1872,11 @@ def apply_executive_styles() -> None:
 
         .ec-detail-item {
             background: var(--dasa-blue-pale);
-            border: 1px solid #c8d8ec;
-            border-radius: 10px;
+            border: 1px solid #c8dede;
+            border-radius: 8px;
             padding: 8px 10px;
             font-size: 0.92rem;
-            color: #0d1f3c;
+            color: #0a2e2f;
             line-height: 1.35;
             font-weight: 500;
         }
@@ -1927,33 +1902,18 @@ def apply_executive_styles() -> None:
         }
 
         .ec-summary-item {
-            background: linear-gradient(180deg, #ffffff 0%, var(--dasa-blue-pale) 100%);
+            background: #ffffff;
             border: 1px solid var(--ec-border);
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 10px 12px;
-            box-shadow: 0 4px 10px rgba(0, 59, 113, 0.06);
+            box-shadow: 0 2px 6px rgba(10,139,141,0.05);
             animation: fadeInUp 0.5s ease-out;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             position: relative;
             overflow: hidden;
         }
-        .ec-summary-item::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--dasa-blue) 0%, var(--dasa-orange) 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-        .ec-summary-item:hover::after {
-            transform: scaleX(1);
-        }
         .ec-summary-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(0, 59, 113, 0.12);
+            box-shadow: 0 4px 12px rgba(10,139,141,0.1);
         }
 
         .ec-summary-label {
@@ -1973,20 +1933,18 @@ def apply_executive_styles() -> None:
         }
 
         .ec-modal-panel {
-            background: rgba(248, 251, 255, 0.9);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: #f8fbfb;
             border: 1px solid var(--ec-border);
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 10px 12px;
             margin-bottom: 8px;
         }
 
-        /* ── SIDEBAR PREMIUM ── */
+        /* ── SIDEBAR ARKMEDS ── */
         section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #00274d 0%, var(--dasa-blue) 30%, #002952 100%);
+            background: linear-gradient(180deg, #067375 0%, #0A8B8D 30%, #056d6f 100%);
             border-right: none;
-            box-shadow: 4px 0 24px rgba(0, 59, 113, 0.25);
+            box-shadow: 2px 0 12px rgba(10,139,141,0.2);
             position: relative;
         }
         section[data-testid="stSidebar"]::after {
@@ -1994,9 +1952,9 @@ def apply_executive_styles() -> None:
             position: absolute;
             top: 0;
             right: 0;
-            width: 3px;
+            width: 2px;
             height: 100%;
-            background: linear-gradient(180deg, var(--dasa-orange), var(--dasa-blue-light), var(--dasa-orange));
+            background: rgba(255,255,255,0.15);
         }
 
         section[data-testid="stSidebar"] h2,
@@ -2013,18 +1971,16 @@ def apply_executive_styles() -> None:
 
         section[data-testid="stSidebar"] div[data-testid="stExpander"] details {
             border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 14px;
+            border-radius: 10px;
             background: rgba(255,255,255,0.06);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
             transition: all 0.3s ease;
         }
         section[data-testid="stSidebar"] div[data-testid="stExpander"] details:hover {
             background: rgba(255,255,255,0.10);
-            border-color: rgba(255,106,19,0.3);
+            border-color: rgba(255,255,255,0.25);
         }
         section[data-testid="stSidebar"] div[data-testid="stExpander"] details[open] {
-            border-color: rgba(255,106,19,0.4);
+            border-color: rgba(255,255,255,0.3);
             background: rgba(255,255,255,0.08);
         }
 
@@ -2040,46 +1996,31 @@ def apply_executive_styles() -> None:
         section[data-testid="stSidebar"] .stTextInput input {
             background: rgba(255,255,255,0.92);
             border: 1px solid rgba(255,255,255,0.18);
-            color: #0a1e3d;
-            border-radius: 10px;
+            color: #0a2e2f;
+            border-radius: 8px;
             transition: all 0.3s ease;
         }
         section[data-testid="stSidebar"] .stTextInput input:focus {
-            border-color: var(--dasa-orange);
-            box-shadow: 0 0 12px rgba(255,106,19,0.2);
+            border-color: var(--dasa-blue-light);
+            box-shadow: 0 0 8px rgba(20,163,165,0.25);
             background: rgba(255,255,255,0.96);
         }
         section[data-testid="stSidebar"] .stTextInput input::placeholder {
-            color: #8cadc8;
+            color: #8cb8b8;
         }
 
         section[data-testid="stSidebar"] .stButton > button {
-            background: linear-gradient(135deg, var(--dasa-orange) 0%, var(--dasa-orange-light) 100%);
+            background: rgba(255,255,255,0.15);
             color: #ffffff;
-            border: none;
+            border: 1px solid rgba(255,255,255,0.3);
             font-weight: 700;
-            border-radius: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        section[data-testid="stSidebar"] .stButton > button::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-            transition: left 0.5s ease;
-        }
-        section[data-testid="stSidebar"] .stButton > button:hover::after {
-            left: 100%;
+            border-radius: 8px;
+            transition: all 0.25s ease;
         }
         section[data-testid="stSidebar"] .stButton > button:hover {
-            background: linear-gradient(135deg, #e85d0c 0%, var(--dasa-orange) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(255, 106, 19, 0.35);
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.5);
+            box-shadow: 0 4px 12px rgba(10,139,141,0.25);
         }
 
         section[data-testid="stSidebar"] .stDateInput input {
@@ -2105,11 +2046,11 @@ def apply_executive_styles() -> None:
             background: rgba(255,255,255,0.10);
             border: 1px solid rgba(255,255,255,0.18);
             color: #ffffff;
-            border-radius: 10px;
+            border-radius: 8px;
             transition: all 0.3s ease;
         }
         section[data-testid="stSidebar"] .stSelectbox > div > div:hover {
-            border-color: rgba(255,106,19,0.4);
+            border-color: rgba(255,255,255,0.4);
         }
 
         /* ── Headings & Metrics ── */
@@ -2126,9 +2067,9 @@ def apply_executive_styles() -> None:
         /* ── DataFrames ── */
         div[data-testid="stDataFrame"] {
             border: 1px solid var(--ec-border);
-            border-radius: 14px;
+            border-radius: 10px;
             background: #ffffff;
-            box-shadow: 0 4px 16px rgba(0, 59, 113, 0.06);
+            box-shadow: 0 2px 8px rgba(10,139,141,0.05);
             animation: fadeIn 0.5s ease-out;
             overflow: hidden;
         }
@@ -2136,55 +2077,35 @@ def apply_executive_styles() -> None:
             content: "";
             display: block;
             height: 3px;
-            background: linear-gradient(90deg, var(--dasa-blue) 0%, var(--dasa-orange) 100%);
+            background: var(--dasa-blue);
         }
 
         /* ── Buttons ── */
         .stButton > button,
         .stDownloadButton > button {
-            border-radius: 10px;
+            border-radius: 8px;
             border: 1px solid var(--ec-border);
-            background: linear-gradient(180deg, #ffffff 0%, #f0f5fc 100%);
+            background: #ffffff;
             color: var(--dasa-blue);
             font-weight: 700;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stButton > button::after,
-        .stDownloadButton > button::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            transition: left 0.5s ease;
-        }
-        .stButton > button:hover::after,
-        .stDownloadButton > button:hover::after {
-            left: 100%;
+            transition: all 0.25s ease;
         }
 
         .stButton > button:hover,
         .stDownloadButton > button:hover {
-            border-color: var(--dasa-blue-light);
-            background: linear-gradient(180deg, #fefefe 0%, #e3edfa 100%);
+            border-color: var(--dasa-blue);
+            background: var(--dasa-blue-pale);
             color: var(--dasa-blue);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 59, 113, 0.15);
+            box-shadow: 0 2px 8px rgba(10,139,141,0.12);
         }
 
         .stDownloadButton > button {
-            border-left: 4px solid var(--dasa-orange);
-            background: linear-gradient(135deg, #fff8f3 0%, #fff0e6 100%);
+            border-left: 3px solid var(--dasa-blue);
+            background: var(--dasa-blue-pale);
         }
         .stDownloadButton > button:hover {
-            background: linear-gradient(135deg, #fff0e6 0%, #ffe4d4 100%);
-            border-left-color: #e05500;
-            box-shadow: 0 6px 16px rgba(255, 106, 19, 0.15);
+            background: #d0eded;
+            border-left-color: #067375;
         }
 
         /* ── Inputs premium ── */
@@ -2205,7 +2126,7 @@ def apply_executive_styles() -> None:
         .stTextInput > div > div > input:focus,
         .stNumberInput > div > div > input:focus {
             border-color: var(--dasa-blue-light);
-            box-shadow: 0 0 0 3px rgba(0,59,113,0.1);
+            box-shadow: 0 0 0 3px rgba(10,139,141,0.1);
         }
 
         .stSelectbox > div > div {
@@ -2268,15 +2189,13 @@ def apply_executive_styles() -> None:
         /* ── Expanders ── */
         div[data-testid="stExpander"] details {
             border: 1px solid var(--ec-border);
-            border-radius: 14px !important;
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            transition: all 0.3s ease;
+            border-radius: 10px !important;
+            background: #ffffff;
+            transition: all 0.25s ease;
             overflow: hidden;
         }
         div[data-testid="stExpander"] details:hover {
-            box-shadow: 0 4px 16px rgba(0, 59, 113, 0.08);
+            box-shadow: 0 2px 8px rgba(10,139,141,0.08);
         }
         div[data-testid="stExpander"] details[open] {
             border-color: var(--dasa-blue-light);
@@ -2289,17 +2208,15 @@ def apply_executive_styles() -> None:
             transition: background 0.2s ease;
         }
         div[data-testid="stExpander"] summary:hover {
-            background: rgba(0,59,113,0.04);
+            background: rgba(10,139,141,0.04);
         }
 
         /* ── Header ── */
         header[data-testid="stHeader"] {
-            background: linear-gradient(90deg, var(--dasa-blue) 0%, #004d8f 60%, var(--dasa-orange) 100%);
-            background-size: 200% 100%;
-            animation: gradientFlow 6s ease infinite;
+            background: var(--dasa-blue);
             border-bottom: none;
-            height: 4px;
-            min-height: 4px;
+            height: 3px;
+            min-height: 3px;
         }
 
         [data-testid="stSidebarCollapsedControl"] {
@@ -2309,25 +2226,22 @@ def apply_executive_styles() -> None:
             z-index: 1000;
         }
 
-        /* ── BRAND HEADER PROFISSIONAL ── */
+        /* ── BRAND HEADER ARKMEDS ── */
         .brand-wrap {
             display: flex;
             justify-content: center;
             margin: 0 0 16px 0;
-            animation: fadeInUp 0.7s ease-out;
+            animation: fadeInUp 0.5s ease-out;
         }
         .brand-card {
-            background: linear-gradient(135deg, var(--dasa-blue) 0%, #004d8f 40%, #003060 70%, #002040 100%);
+            background: linear-gradient(135deg, #0A8B8D 0%, #067375 50%, #056d6f 100%);
             border: none;
-            border-radius: 20px;
-            padding: 24px 36px;
-            box-shadow:
-                0 16px 48px rgba(0, 59, 113, 0.25),
-                0 6px 16px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 20px 32px;
+            box-shadow: 0 4px 16px rgba(10,139,141,0.2);
             text-align: center;
             width: min(580px, 96vw);
-            min-height: 140px;
+            min-height: 120px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -2341,10 +2255,8 @@ def apply_executive_styles() -> None:
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--dasa-orange), var(--dasa-orange-light), var(--dasa-orange));
-            animation: shimmer 3s infinite linear;
-            background-size: 200% auto;
+            height: 3px;
+            background: rgba(255,255,255,0.2);
         }
         .brand-card::after {
             content: "";
@@ -2352,10 +2264,8 @@ def apply_executive_styles() -> None:
             bottom: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--dasa-orange-light), var(--dasa-orange), var(--dasa-orange-light));
-            animation: shimmer 3s infinite linear;
-            background-size: 200% auto;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
         }
         .brand-card .brand-glow {
             position: absolute;
@@ -2363,91 +2273,87 @@ def apply_executive_styles() -> None:
             left: -20%;
             width: 140%;
             height: 200%;
-            background: radial-gradient(ellipse at center, rgba(255,106,19,0.06) 0%, transparent 60%);
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.04) 0%, transparent 60%);
             pointer-events: none;
         }
         .brand-logo-icon {
             width: 48px;
             height: 48px;
             margin-bottom: 8px;
-            animation: float 3s ease-in-out infinite;
         }
         .brand-title {
             margin: 0 !important;
             font-weight: 900;
-            letter-spacing: 8px;
-            font-size: 42px !important;
+            letter-spacing: 6px;
+            font-size: 38px !important;
             color: #ffffff;
             line-height: 1;
             text-transform: uppercase;
-            text-shadow: 0 2px 12px rgba(0,0,0,0.35);
         }
         .brand-divider {
-            width: 80px;
-            height: 3px;
-            background: linear-gradient(90deg, var(--dasa-orange), var(--dasa-orange-light));
+            width: 60px;
+            height: 2px;
+            background: rgba(255,255,255,0.35);
             border-radius: 2px;
             margin: 10px auto;
         }
         .brand-subtitle {
             margin: 0 !important;
-            font-weight: 700;
-            font-size: 15px !important;
-            color: var(--dasa-orange-light);
+            font-weight: 600;
+            font-size: 14px !important;
+            color: rgba(255,255,255,0.8);
             line-height: 1.3;
             letter-spacing: 3px;
             text-transform: uppercase;
         }
 
-        /* ── Tabs premium ── */
+        /* ── Tabs Arkmeds ── */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 4px;
-            background: rgba(255,255,255,0.6);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            border-bottom: none;
-            border-radius: 12px;
-            padding: 4px;
+            gap: 2px;
+            background: #ffffff;
+            border-bottom: 2px solid var(--ec-border);
+            border-radius: 0;
+            padding: 0;
         }
         .stTabs [data-baseweb="tab"] {
             background: transparent;
             border: none;
-            border-radius: 10px;
-            color: #3a5570;
-            font-weight: 800;
+            border-radius: 0;
+            border-bottom: 3px solid transparent;
+            color: #5a7a7a;
+            font-weight: 700;
             font-size: 0.95rem;
-            padding: 8px 20px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 10px 20px;
+            transition: all 0.2s ease;
         }
         .stTabs [data-baseweb="tab"]:hover {
             color: var(--dasa-blue);
-            background: rgba(0,59,113,0.06);
+            border-bottom-color: rgba(10,139,141,0.3);
         }
         .stTabs [aria-selected="true"] {
-            color: #ffffff !important;
-            background: linear-gradient(135deg, var(--dasa-blue) 0%, #004d8f 100%) !important;
+            color: var(--dasa-blue) !important;
+            background: transparent !important;
             font-weight: 900;
-            box-shadow: 0 4px 12px rgba(0,59,113,0.2);
+            border-bottom: 3px solid var(--dasa-blue) !important;
         }
 
         /* ── Charts ── */
         div[data-testid="stPlotlyChart"] {
             width: 100%;
-            animation: fadeIn 0.6s ease-out;
-            border-radius: 14px;
+            animation: fadeIn 0.4s ease-out;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0, 59, 113, 0.06);
+            box-shadow: 0 2px 8px rgba(10,139,141,0.05);
             border: 1px solid var(--ec-border);
             background: #ffffff;
         }
 
         /* ── Section dividers ── */
         .section-divider {
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--dasa-blue-light), var(--dasa-orange), transparent);
+            height: 1px;
+            background: var(--ec-border);
             margin: 16px 0;
             border: none;
-            animation: fadeIn 0.8s ease-out;
         }
 
         /* ── Footer ── */
@@ -3239,8 +3145,8 @@ def main() -> None:
             """
             <div class='upload-panel'>
                 <svg width='36' height='36' viewBox='0 0 24 24' fill='none' style='margin-bottom:6px;'>
-                  <path d='M12 16V4m0 0L8 8m4-4l4 4' stroke='#003B71' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>
-                  <path d='M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2' stroke='#FF6A13' stroke-width='2' stroke-linecap='round'/>
+                  <path d='M12 16V4m0 0L8 8m4-4l4 4' stroke='#0A8B8D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>
+                  <path d='M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2' stroke='#14A3A5' stroke-width='2' stroke-linecap='round'/>
                 </svg>
                 <h3>Entrada de Arquivo</h3>
                 <p>Arraste ou selecione sua planilha</p>
@@ -3545,15 +3451,15 @@ def main() -> None:
             f"""
             <div style='
                 display:flex; align-items:center; gap:14px; padding:10px 18px;
-                background:linear-gradient(135deg, rgba(0,59,113,0.10), rgba(255,106,19,0.08));
-                border-left:4px solid #FF6A13; border-radius:8px;
-                backdrop-filter:blur(6px); margin-bottom:8px;
+                background:rgba(10,139,141,0.08);
+                border-left:4px solid var(--dasa-blue); border-radius:8px;
+                margin-bottom:8px;
             '>
                 <span style='font-size:1.6rem;'>🔍</span>
-                <span style='font-weight:700;color:#003B71;font-size:0.95rem;'>
+                <span style='font-weight:700;color:#0A8B8D;font-size:0.95rem;'>
                     {filtros_ativos_count} filtro(s) ativo(s)
                 </span>
-                <span style='color:#1a3c5e;font-size:0.88rem;'>
+                <span style='color:#2d5050;font-size:0.88rem;'>
                     {len(filtered)} de {len(df)} registros
                 </span>
             </div>
@@ -3565,11 +3471,11 @@ def main() -> None:
             f"""
             <div style='
                 display:flex; align-items:center; gap:14px; padding:10px 18px;
-                background:rgba(0,59,113,0.05); border-left:4px solid #003B71;
+                background:rgba(10,139,141,0.05); border-left:4px solid #0A8B8D;
                 border-radius:8px; margin-bottom:8px;
             '>
                 <span style='font-size:1.6rem;'>📊</span>
-                <span style='color:#1a3c5e;font-size:0.9rem;'>
+                <span style='color:#2d5050;font-size:0.9rem;'>
                     {len(df)} registros · Nenhum filtro ativo — exibindo todos os dados
                 </span>
             </div>
