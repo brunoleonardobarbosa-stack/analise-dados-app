@@ -3985,9 +3985,9 @@ def main() -> None:
                 )
                 dest_input = st.text_input(
                     "Destinatarios",
-                    value=default_dest,
-                    placeholder="email1@exemplo.com, email2@exemplo.com",
+                    placeholder=default_dest if default_dest else "email1@exemplo.com, email2@exemplo.com",
                     key="email_destinatarios",
+                    help="Separe multiplos e-mails por virgula",
                 )
 
                 if st.button("Enviar e-mail", type="primary", use_container_width=True, key="btn_send_email"):
