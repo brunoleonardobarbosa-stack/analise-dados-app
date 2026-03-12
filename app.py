@@ -3161,7 +3161,8 @@ def to_open_calls_by_quadro_pdf_bytes(df_open: pd.DataFrame, filtros_texto: str)
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
+import fitz  # PyMuPDF
 
 
 def _get_email_config() -> dict | None:
@@ -3178,29 +3179,69 @@ def _get_email_config() -> dict | None:
         return None
 
 
+def _pdf_pages_to_images(pdf_bytes: bytes, dpi: int = 150) -> list[bytes]:
+    """Converte cada pagina do PDF em uma imagem PNG usando PyMuPDF."""
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    images: list[bytes] = []
+    mat = fitz.Matrix(dpi / 72, dpi / 72)
+    for page in doc:
+        pix = page.get_pixmap(matrix=mat)
+        images.append(pix.tobytes("png"))
+    doc.close()
+    return images
+
+
 def send_email_report(
     destinatarios: list[str],
     assunto: str,
-    corpo_html: str,
-    pdf_bytes: bytes | None = None,
-    pdf_filename: str = "relatorio.pdf",
+    pdf_bytes: bytes,
 ) -> str:
-    """Envia e-mail com corpo HTML e PDF opcional. Retorna 'ok' ou mensagem de erro."""
+    """Envia e-mail com imagens das paginas do PDF embutidas no corpo. Retorna 'ok' ou mensagem de erro."""
     cfg = _get_email_config()
     if cfg is None:
         return "Credenciais de e-mail nao configuradas em .streamlit/secrets.toml"
 
-    msg = MIMEMultipart("mixed")
+    try:
+        page_images = _pdf_pages_to_images(pdf_bytes)
+    except Exception as exc:
+        return f"Erro ao converter PDF em imagens: {exc}"
+
+    # Monta HTML com imagens inline via CID
+    imgs_html = ""
+    for i in range(len(page_images)):
+        imgs_html += (
+            f"<div style='margin-bottom:12px'>"
+            f"<img src='cid:page_{i}' style='width:100%;max-width:700px;border:1px solid #ddd;border-radius:4px' />"
+            f"</div>"
+        )
+
+    html_body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:720px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#0A8B8D,#067375);padding:18px 20px;border-radius:8px 8px 0 0">
+            <h1 style="color:#fff;margin:0;font-size:20px">DASA — Engenharia Clinica</h1>
+            <p style="color:#d0f0f0;margin:4px 0 0;font-size:13px">Relatorio de Chamados</p>
+        </div>
+        <div style="padding:16px 20px;background:#f9f9f9;border:1px solid #e0e0e0;border-top:0;border-radius:0 0 8px 8px">
+            {imgs_html}
+            <hr style="border:0;border-top:1px solid #ddd;margin:16px 0">
+            <p style="color:#999;font-size:11px;text-align:center">
+                Enviado pelo Dashboard DASA Engenharia Clinica
+            </p>
+        </div>
+    </div>
+    """
+
+    msg = MIMEMultipart("related")
     msg["From"] = cfg["sender"]
     msg["To"] = ", ".join(destinatarios)
     msg["Subject"] = assunto
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-    msg.attach(MIMEText(corpo_html, "html", "utf-8"))
-
-    if pdf_bytes:
-        att = MIMEApplication(pdf_bytes, _subtype="pdf")
-        att.add_header("Content-Disposition", "attachment", filename=pdf_filename)
-        msg.attach(att)
+    for i, img_bytes in enumerate(page_images):
+        img_part = MIMEImage(img_bytes, _subtype="png")
+        img_part.add_header("Content-ID", f"<page_{i}>")
+        img_part.add_header("Content-Disposition", "inline", filename=f"pagina_{i + 1}.png")
+        msg.attach(img_part)
 
     try:
         with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"], timeout=30) as server:
@@ -3216,68 +3257,6 @@ def send_email_report(
         return f"Erro SMTP: {exc}"
     except Exception as exc:
         return f"Erro ao enviar: {exc}"
-
-
-def build_email_body_html(
-    metrics: dict, quadro: str | None = None, chamados_df: pd.DataFrame | None = None,
-) -> str:
-    """Gera corpo HTML do e-mail com resumo dos KPIs."""
-    titulo = f"Relatorio — {quadro}" if quadro else "Relatorio Geral"
-    abertos = metrics.get("abertos", 0)
-    fechados = metrics.get("fechados", 0)
-    total = metrics.get("total", 0)
-    mttr = metrics.get("mttr", "N/D")
-    mttr_text = f"{mttr} dias" if isinstance(mttr, int) else "N/D"
-
-    rows_html = ""
-    if chamados_df is not None and not chamados_df.empty:
-        for _, r in chamados_df.head(30).iterrows():
-            tag = escape(str(r.get("TAG", "-")))
-            modelo = escape(str(r.get("Modelo", "-")))
-            dias = r.get("Dias Parado", 0)
-            falha = escape(str(r.get("Falha", "-")))
-            rows_html += (
-                f"<tr><td style='padding:6px;border:1px solid #ddd'>{tag}</td>"
-                f"<td style='padding:6px;border:1px solid #ddd'>{modelo}</td>"
-                f"<td style='padding:6px;border:1px solid #ddd;text-align:center'>{dias}</td>"
-                f"<td style='padding:6px;border:1px solid #ddd'>{falha}</td></tr>"
-            )
-
-    tabela = ""
-    if rows_html:
-        tabela = (
-            "<h3 style='color:#0A8B8D'>Chamados em Aberto</h3>"
-            "<table style='border-collapse:collapse;width:100%;font-size:13px'>"
-            "<tr style='background:#0A8B8D;color:#fff'>"
-            "<th style='padding:8px;border:1px solid #ddd'>TAG</th>"
-            "<th style='padding:8px;border:1px solid #ddd'>Modelo</th>"
-            "<th style='padding:8px;border:1px solid #ddd'>Dias Parado</th>"
-            "<th style='padding:8px;border:1px solid #ddd'>Falha</th></tr>"
-            f"{rows_html}</table>"
-        )
-
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto">
-        <div style="background:linear-gradient(135deg,#0A8B8D,#067375);padding:20px;border-radius:8px 8px 0 0">
-            <h1 style="color:#fff;margin:0;font-size:22px">DASA — Engenharia Clinica</h1>
-            <p style="color:#d0f0f0;margin:4px 0 0;font-size:14px">{titulo}</p>
-        </div>
-        <div style="padding:20px;background:#f9f9f9;border:1px solid #e0e0e0;border-top:0;border-radius:0 0 8px 8px">
-            <h2 style="color:#0A8B8D;font-size:16px;margin-top:0">Resumo de KPIs</h2>
-            <table style="width:100%;border-collapse:collapse;font-size:14px">
-                <tr><td style="padding:8px;font-weight:bold">Total de Chamados</td><td style="padding:8px">{total}</td></tr>
-                <tr style="background:#e6f5f5"><td style="padding:8px;font-weight:bold">Abertos</td><td style="padding:8px">{abertos}</td></tr>
-                <tr><td style="padding:8px;font-weight:bold">Fechados</td><td style="padding:8px">{fechados}</td></tr>
-                <tr style="background:#e6f5f5"><td style="padding:8px;font-weight:bold">Tempo Medio Atendimento</td><td style="padding:8px">{mttr_text}</td></tr>
-            </table>
-            {tabela}
-            <hr style="border:0;border-top:1px solid #ddd;margin:20px 0">
-            <p style="color:#999;font-size:11px;text-align:center">
-                Enviado automaticamente pelo Dashboard DASA Engenharia Clinica
-            </p>
-        </div>
-    </div>
-    """
 
 
 def main() -> None:
@@ -3952,8 +3931,8 @@ def main() -> None:
         if email_cfg is not None:
             with st.expander("Enviar relatorio por e-mail", expanded=False, icon="📧"):
                 st.markdown(
-                    "<p style='font-size:0.88rem;color:#555'>Envie o relatorio de chamados abertos "
-                    "por e-mail. Insira os destinatarios separados por virgula.</p>",
+                    "<p style='font-size:0.88rem;color:#555'>Envie o relatorio como imagens das "
+                    "paginas do PDF diretamente no corpo do e-mail.</p>",
                     unsafe_allow_html=True,
                 )
                 dest_input = st.text_input(
@@ -3961,64 +3940,22 @@ def main() -> None:
                     placeholder="email1@exemplo.com, email2@exemplo.com",
                     key="email_destinatarios",
                 )
-                email_mode = st.radio(
-                    "Modo de envio",
-                    ["Relatorio geral (todos os chamados)", "Separado por Quadro de Trabalho"],
-                    horizontal=True,
-                    key="email_mode",
-                )
-                anexar_pdf = st.checkbox("Anexar PDF do relatorio", value=True, key="email_anexar_pdf")
 
                 if st.button("Enviar e-mail", type="primary", use_container_width=True, key="btn_send_email"):
                     destinatarios = [d.strip() for d in dest_input.split(",") if d.strip() and "@" in d]
                     if not destinatarios:
                         st.warning("Informe ao menos um e-mail valido.")
+                    elif pdf_quadro_bytes is None:
+                        st.warning("PDF do relatorio nao disponivel. Verifique se ha chamados abertos.")
                     else:
                         with st.spinner("Enviando..."):
-                            if email_mode.startswith("Relatorio geral"):
-                                pdf_att = pdf_quadro_bytes if anexar_pdf else None
-                                body = build_email_body_html(metrics, chamados_df=open_df)
-                                ts = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M")
-                                assunto = f"DASA Eng. Clinica — Relatorio Geral ({ts})"
-                                result = send_email_report(destinatarios, assunto, body, pdf_att,
-                                                           f"relatorio_geral_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.pdf")
-                                if result == "ok":
-                                    st.success(f"E-mail enviado para {', '.join(destinatarios)}")
-                                else:
-                                    st.error(result)
+                            ts = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M")
+                            assunto = f"DASA Eng. Clinica — Relatorio ({ts})"
+                            result = send_email_report(destinatarios, assunto, pdf_quadro_bytes)
+                            if result == "ok":
+                                st.success(f"E-mail enviado para {', '.join(destinatarios)}")
                             else:
-                                # Envio separado por quadro
-                                if "Quadro de Trabalho" not in open_df.columns or open_df.empty:
-                                    st.info("Nenhum chamado aberto para enviar.")
-                                else:
-                                    quadros = sorted(open_df["Quadro de Trabalho"].dropna().unique().tolist())
-                                    erros = []
-                                    enviados = 0
-                                    for q in quadros:
-                                        q_df = open_df[open_df["Quadro de Trabalho"] == q]
-                                        body = build_email_body_html(metrics, quadro=q, chamados_df=q_df)
-                                        ts = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M")
-                                        assunto = f"DASA Eng. Clinica — {q} ({ts})"
-                                        pdf_att = None
-                                        if anexar_pdf:
-                                            try:
-                                                pdf_att = to_open_calls_by_quadro_pdf_bytes(q_df, filtros_texto=filtros_texto_pdf)
-                                            except Exception:
-                                                pdf_att = None
-                                        result = send_email_report(
-                                            destinatarios, assunto, body, pdf_att,
-                                            f"relatorio_{q.replace(' ', '_')}_{pd.Timestamp.now().strftime('%Y%m%d')}.pdf",
-                                        )
-                                        if result == "ok":
-                                            enviados += 1
-                                        else:
-                                            erros.append(f"{q}: {result}")
-
-                                    if enviados > 0:
-                                        st.success(f"{enviados} e-mail(s) enviado(s) para {', '.join(destinatarios)}")
-                                    if erros:
-                                        for e in erros:
-                                            st.error(e)
+                                st.error(result)
 
         with st.expander("Visualizacao em cartoes", expanded=False):
             modo_cartoes = st.radio(
