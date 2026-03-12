@@ -836,15 +836,16 @@ def compute_metrics(df: pd.DataFrame) -> dict[str, int | float | str | None]:
         if not duracao_valida.empty:
             mttr = int(round(float(duracao_valida.mean())))
 
-    # Contagens por tipo de serviço
+    # Contagens por tipo de serviço (apenas abertos)
     corretiva = 0
     preventiva = 0
     calibracao = 0
     if "TIPO_SERVICO" in df.columns:
+        mask_aberto = status_norm == "ABERTO"
         grupos = df["TIPO_SERVICO"].map(normalize_service_group)
-        corretiva = int((grupos == "CORRETIVA").sum())
-        preventiva = int((grupos == "PREVENTIVA").sum())
-        calibracao = int((grupos == "CALIBRACAO").sum())
+        corretiva = int((mask_aberto & (grupos == "CORRETIVA")).sum())
+        preventiva = int((mask_aberto & (grupos == "PREVENTIVA")).sum())
+        calibracao = int((mask_aberto & (grupos == "CALIBRACAO")).sum())
 
     return {
         "abertos": abertos,
@@ -1597,22 +1598,22 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
             "Funcao: indica efetividade do time na conversao de chamados em resolucoes.\nLógica: (fechados/total)*100",
         ),
         (
-            "Corretiva",
+            "Corretiva em Aberto",
             format_int_pt_br(int(metrics.get("corretiva", 0))),
-            "Total de chamados corretivos",
-            "Funcao: total de chamados do tipo Corretiva no periodo filtrado.\nLógica: contagem de registros com TIPO_SERVICO normalizado = CORRETIVA",
+            "Chamados corretivos abertos",
+            "Funcao: chamados corretivos com status ABERTO no periodo filtrado.\nLógica: STATUS=ABERTO e TIPO_SERVICO normalizado = CORRETIVA",
         ),
         (
-            "Preventiva",
+            "Preventiva em Aberto",
             format_int_pt_br(int(metrics.get("preventiva", 0))),
-            "Total de chamados preventivos",
-            "Funcao: total de chamados do tipo Preventiva no periodo filtrado.\nLógica: contagem de registros com TIPO_SERVICO normalizado = PREVENTIVA",
+            "Chamados preventivos abertos",
+            "Funcao: chamados preventivos com status ABERTO no periodo filtrado.\nLógica: STATUS=ABERTO e TIPO_SERVICO normalizado = PREVENTIVA",
         ),
         (
-            "Calibração",
+            "Calibração em Aberto",
             format_int_pt_br(int(metrics.get("calibracao", 0))),
-            "Total de chamados de calibração",
-            "Funcao: total de chamados do tipo Calibracao (inclui Verificacao) no periodo filtrado.\nLógica: contagem de registros com TIPO_SERVICO normalizado = CALIBRACAO",
+            "Chamados de calibração abertos",
+            "Funcao: chamados de calibracao (inclui verificacao) com status ABERTO no periodo filtrado.\nLógica: STATUS=ABERTO e TIPO_SERVICO normalizado = CALIBRACAO",
         ),
     ]
 
