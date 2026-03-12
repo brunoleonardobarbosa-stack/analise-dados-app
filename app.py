@@ -386,6 +386,186 @@ def apply_filters(
 
 # ── Engine de Inteligência Analítica (local, sem API externa) ──
 
+_IA_PERGUNTAS = [
+    {
+        "padroes": ["situacao", "situação", "geral", "resumo", "como esta", "como está", "visao geral", "visão geral", "overview"],
+        "chave": "resumo",
+    },
+    {
+        "padroes": ["backlog", "atrasado", "antigo", "30 dia", "60 dia", "velho", "parado"],
+        "chave": "backlog",
+    },
+    {
+        "padroes": ["critico", "crítico", "criticidade", "alta", "urgente", "prioridade", "risco"],
+        "chave": "criticidade",
+    },
+    {
+        "padroes": ["falha", "defeito", "problema", "recorrente", "frequente", "quebra"],
+        "chave": "falhas",
+    },
+    {
+        "padroes": ["equipamento", "modelo", "aparelho", "maquina", "máquina", "demandado"],
+        "chave": "equipamentos",
+    },
+    {
+        "padroes": ["quadro", "equipe", "time", "sobrecarga", "carga", "distribuicao"],
+        "chave": "quadros",
+    },
+    {
+        "padroes": ["mttr", "tempo", "resolucao", "resolução", "sla", "media", "média", "atendimento", "demora"],
+        "chave": "mttr",
+    },
+    {
+        "padroes": ["cancelamento", "cancelado", "cancelar", "taxa"],
+        "chave": "cancelamento",
+    },
+    {
+        "padroes": ["recomend", "acao", "ação", "fazer", "priorizar", "sugestao", "sugestão", "plano"],
+        "chave": "recomendacoes",
+    },
+    {
+        "padroes": ["nota", "score", "pontuacao", "avaliacao", "avaliação"],
+        "chave": "nota",
+    },
+]
+
+
+def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
+    """Responde perguntas sobre os dados com base no diagnóstico."""
+    pergunta_lower = pergunta.lower().strip()
+    m = diag["metricas"]
+
+    # Detectar intenção
+    chave_detectada = None
+    for item in _IA_PERGUNTAS:
+        for padrao in item["padroes"]:
+            if padrao in pergunta_lower:
+                chave_detectada = item["chave"]
+                break
+        if chave_detectada:
+            break
+
+    if chave_detectada == "resumo" or not chave_detectada:
+        resp = f"**Resumo da Situacao Atual:**\n\n{diag['resumo_executivo']}\n\n"
+        resp += f"**Nota operacional: {diag['nota']:.0f}/100 ({diag['nota_label']})**"
+        return resp
+
+    if chave_detectada == "backlog":
+        resp = f"**Analise de Backlog:**\n\n"
+        resp += f"- Chamados com mais de 30 dias: **{m['backlog_30']}**\n"
+        resp += f"- Chamados com mais de 60 dias: **{m['backlog_60']}**\n"
+        resp += f"- Idade media dos chamados abertos: **{m['media_aging']:.0f} dias**\n\n"
+        if m["backlog_30"] >= 15:
+            resp += "⚠️ **Situacao critica.** O backlog esta muito alto. Recomendo mutirao urgente para reducao."
+        elif m["backlog_30"] >= 5:
+            resp += "🟡 **Atencao.** Ha acumulo moderado. Sugiro agendar janela semanal para reducao."
+        else:
+            resp += "✅ **Backlog controlado.** Manter monitoramento regular."
+        return resp
+
+    if chave_detectada == "criticidade":
+        resp = f"**Chamados de Alta Criticidade:**\n\n"
+        resp += f"- Alta criticidade em aberto: **{m['alta_abertos']}**\n"
+        resp += f"- Total de abertos: **{m['abertos']}**\n\n"
+        if m["alta_abertos"] >= 10:
+            resp += "🔴 **Alerta maximo.** Mobilizar equipe imediatamente para estes chamados."
+        elif m["alta_abertos"] >= 5:
+            resp += "🟡 **Atencao.** Priorizar atendimento no primeiro turno."
+        elif m["alta_abertos"] > 0:
+            resp += "🟢 Quantidade gerenciavel. Manter prioridade no atendimento."
+        else:
+            resp += "✅ Sem chamados de alta criticidade pendentes."
+        return resp
+
+    if chave_detectada == "falhas":
+        resp = f"**Top Falhas Recorrentes (Chamados Abertos):**\n\n"
+        if diag["top_falhas"]:
+            for i, (falha, qtd) in enumerate(diag["top_falhas"], 1):
+                resp += f"{i}. **{falha}** — {qtd} ocorrencias\n"
+            resp += f"\n💡 A falha mais frequente e **{diag['top_falhas'][0][0]}** com {diag['top_falhas'][0][1]} casos. Avaliar causa raiz."
+        else:
+            resp += "Nenhuma falha registrada nos chamados abertos."
+        return resp
+
+    if chave_detectada == "equipamentos":
+        resp = f"**Equipamentos Mais Demandados:**\n\n"
+        if diag["equip_problematicos"]:
+            for i, eq in enumerate(diag["equip_problematicos"], 1):
+                resp += f"{i}. **{eq['modelo']}** ({eq['fabricante']}) — {eq['chamados']} chamados, media {eq['media_dias']} dias"
+                if eq["alta_crit"] > 0:
+                    resp += f", {eq['alta_crit']} criticos"
+                resp += "\n"
+            top = diag["equip_problematicos"][0]
+            if top["chamados"] >= 5:
+                resp += f"\n⚠️ **{top['modelo']}** e o mais critico. Considerar contrato de manutencao ou substituicao."
+        else:
+            resp += "Nenhum equipamento com chamados abertos no momento."
+        return resp
+
+    if chave_detectada == "quadros":
+        resp = f"**Carga por Quadro de Trabalho:**\n\n"
+        if diag["quadros_ranking"]:
+            for i, q in enumerate(diag["quadros_ranking"], 1):
+                resp += f"{i}. **{q['quadro']}** — {q['abertos']} abertos, media {q['media_dias']} dias"
+                if q["alta_crit"] > 0:
+                    resp += f", {q['alta_crit']} criticos"
+                resp += "\n"
+            top_q = diag["quadros_ranking"][0]
+            resp += f"\n📊 **{top_q['quadro']}** esta com maior carga. Avaliar redistribuicao se necessario."
+        else:
+            resp += "Nenhum quadro com chamados abertos."
+        return resp
+
+    if chave_detectada == "mttr":
+        resp = f"**Tempo de Resolucao (MTTR):**\n\n"
+        if m["mttr"]:
+            resp += f"- MTTR atual: **{int(m['mttr'])} dias**\n"
+            resp += f"- Meta operacional: **15 dias**\n\n"
+            if m["mttr"] > 25:
+                resp += "🔴 **Muito acima da meta.** Revisar fluxo de atendimento, disponibilidade de pecas e escalar gargalos."
+            elif m["mttr"] > 15:
+                resp += "🟡 **Acima da meta.** Identificar os tipos de servico mais demorados e otimizar."
+            else:
+                resp += "✅ **Dentro da meta.** Manter controle e buscar melhoria continua."
+        else:
+            resp += "Nao ha dados de fechamento suficientes para calcular o MTTR."
+        return resp
+
+    if chave_detectada == "cancelamento":
+        resp = f"**Analise de Cancelamentos:**\n\n"
+        resp += f"- Cancelados: **{m['cancelados']}** de **{m['total']}** total\n"
+        resp += f"- Taxa: **{m['taxa_cancelamento']:.1f}%**\n\n"
+        if m["taxa_cancelamento"] >= 15:
+            resp += "🔴 **Taxa muito alta.** Revisar criterios de abertura e treinamento dos solicitantes."
+        elif m["taxa_cancelamento"] >= 8:
+            resp += "🟡 **Acima do esperado.** Monitorar e padronizar fluxo de abertura."
+        else:
+            resp += "✅ Taxa de cancelamento dentro do esperado."
+        return resp
+
+    if chave_detectada == "recomendacoes":
+        resp = f"**Recomendacoes para Acao:**\n\n"
+        for i, (prioridade, texto) in enumerate(diag["recomendacoes"], 1):
+            resp += f"{i}. **[{prioridade}]** {texto}\n"
+        return resp
+
+    if chave_detectada == "nota":
+        resp = f"**Nota Operacional: {diag['nota']:.0f}/100 — {diag['nota_label']}**\n\n"
+        resp += "A nota e calculada com base em:\n"
+        resp += "- Backlog >30 dias\n- Criticidade alta em aberto\n- MTTR vs meta\n- Taxa de cancelamento\n- Idade media dos chamados\n\n"
+        if diag["nota"] >= 80:
+            resp += "✅ Operacao saudavel. Foco em prevencao."
+        elif diag["nota"] >= 60:
+            resp += "🟢 Boa performance, com pontos de melhoria."
+        elif diag["nota"] >= 40:
+            resp += "🟡 Atencao necessaria em indicadores chave."
+        else:
+            resp += "🔴 Situacao critica. Acoes imediatas necessarias."
+        return resp
+
+    return f"**Resumo da Situacao Atual:**\n\n{diag['resumo_executivo']}"
+
+
 def _ia_classificar_severidade(valor: float, limites: tuple[float, float]) -> str:
     if valor >= limites[1]:
         return "CRITICO"
@@ -4111,6 +4291,59 @@ def main() -> None:
         ]
         for col, (label, val) in zip(met_cols, met_labels):
             col.metric(label, val)
+
+        # ── Campo de Perguntas ──
+        st.markdown("---")
+        st.markdown("### Pergunte sobre seus dados")
+        st.markdown(
+            "<div class='ec-section-subtitle'>"
+            "Digite uma pergunta sobre a operacao. Exemplos: "
+            "<em>\"qual a situacao geral?\", \"quais falhas mais recorrentes?\", \"como esta o backlog?\", "
+            "\"quais equipamentos mais demandam?\", \"qual o tempo de resolucao?\"</em>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        if "ia_historico" not in st.session_state:
+            st.session_state["ia_historico"] = []
+
+        # Sugestões rápidas
+        sug_cols = st.columns(5)
+        sugestoes = [
+            ("Situacao geral", "Qual a situacao geral da operacao?"),
+            ("Backlog", "Como esta o backlog de chamados antigos?"),
+            ("Criticidade", "Quantos chamados criticos estao abertos?"),
+            ("Falhas", "Quais as falhas mais recorrentes?"),
+            ("Recomendacoes", "O que devo priorizar agora?"),
+        ]
+        for col_sug, (label_sug, pergunta_sug) in zip(sug_cols, sugestoes):
+            if col_sug.button(label_sug, key=f"ia_sug_{label_sug}"):
+                st.session_state["ia_pending_q"] = pergunta_sug
+
+        # Historico
+        for msg in st.session_state["ia_historico"]:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+        # Input
+        pending_q = st.session_state.pop("ia_pending_q", None)
+        user_q = st.chat_input("Pergunte algo sobre seus dados...", key="ia_chat_input")
+        pergunta = pending_q or user_q
+
+        if pergunta:
+            st.session_state["ia_historico"].append({"role": "user", "content": pergunta})
+            with st.chat_message("user"):
+                st.markdown(pergunta)
+
+            with st.chat_message("assistant"):
+                resposta = _ia_responder_pergunta(pergunta, diag)
+                st.markdown(resposta)
+                st.session_state["ia_historico"].append({"role": "assistant", "content": resposta})
+
+        if st.session_state.get("ia_historico"):
+            if st.button("Limpar conversa", key="ia_limpar_hist"):
+                st.session_state["ia_historico"] = []
+                st.rerun()
 
     if st.session_state.get("details_modal_open") and st.session_state.get("details_modal_kind") == "root_cause":
         modelo = st.session_state.get("selected_root_modelo")
