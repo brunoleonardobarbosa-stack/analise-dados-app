@@ -3187,7 +3187,7 @@ def _get_email_config() -> dict | None:
         "smtp_server": "smtp.gmail.com",
         "smtp_port": 587,
         "sender": "eng.clinica.bot@gmail.com",
-        "app_password": "Casa&bola1667",
+        "app_password": "bnos ciki szyh klof",
     }
 
 
