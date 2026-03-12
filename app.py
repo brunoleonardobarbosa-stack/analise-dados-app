@@ -1714,6 +1714,14 @@ def apply_executive_styles() -> None:
             0%, 100% { transform: translateY(0); }
             50%      { transform: translateY(-4px); }
         }
+        @keyframes spinGear {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        @keyframes spinGearReverse {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(-360deg); }
+        }
 
         :root {
             --dasa-blue: #0A8B8D;
@@ -2277,9 +2285,17 @@ def apply_executive_styles() -> None:
             pointer-events: none;
         }
         .brand-logo-icon {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 8px;
+            width: 64px;
+            height: 64px;
+            margin-bottom: 10px;
+        }
+        .gear-main {
+            transform-origin: 50px 50px;
+            animation: spinGear 8s linear infinite;
+        }
+        .gear-small {
+            transform-origin: 78px 74px;
+            animation: spinGearReverse 5s linear infinite;
         }
         .brand-title {
             margin: 0 !important;
@@ -3127,9 +3143,16 @@ def main() -> None:
             <div class='brand-card'>
                 <div class='brand-glow'></div>
                 <svg class='brand-logo-icon' viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg'>
-                  <rect x='10' y='10' width='80' height='80' rx='16' fill='rgba(255,255,255,0.12)' stroke='rgba(255,255,255,0.3)' stroke-width='2'/>
-                  <rect x='42' y='22' width='16' height='56' rx='4' fill='white'/>
-                  <rect x='22' y='42' width='56' height='16' rx='4' fill='white'/>
+                  <g class='gear-main'>
+                    <path d='M50 18l3.5-7h-7l3.5 7zm0 64l-3.5 7h7L50 82zm-32-32l-7-3.5v7l7-3.5zm64 0l7 3.5v-7l-7 3.5zM24.4 29.4l-6.2-4.6-4.2 4.2 4.6 6.2 5.8-5.8zm51.2 41.2l6.2 4.6 4.2-4.2-4.6-6.2-5.8 5.8zm0-41.2l5.8-5.8-4.2-4.2-6.2 4.6 4.6 5.4zM24.4 70.6l-5.8 5.8 4.2 4.2 6.2-4.6-4.6-5.4z' fill='rgba(255,255,255,0.5)'/>
+                    <circle cx='50' cy='50' r='22' stroke='rgba(255,255,255,0.7)' stroke-width='4' fill='none'/>
+                    <circle cx='50' cy='50' r='12' fill='rgba(255,255,255,0.25)' stroke='rgba(255,255,255,0.6)' stroke-width='2'/>
+                  </g>
+                  <g class='gear-small'>
+                    <path d='M78 62l2-4h-4l2 4zm0 24l-2 4h4l-2-4zm-12-12l-4-2v4l4-2zm24 0l4 2v-4l-4 2zM69 67l-3-2.5-2 2 2.5 3 2.5-2.5zm19.5 15.5l3 2.5 2-2-2.5-3-2.5 2.5zm0-15.5l2.5-2.5-2-2-3 2.5 2.5 2zm-19.5 15.5l-2.5 2.5 2 2 3-2.5-2.5-2z' fill='rgba(255,255,255,0.45)'/>
+                    <circle cx='78' cy='74' r='9' stroke='rgba(255,255,255,0.6)' stroke-width='2.5' fill='none'/>
+                    <circle cx='78' cy='74' r='4.5' fill='rgba(255,255,255,0.2)' stroke='rgba(255,255,255,0.5)' stroke-width='1.5'/>
+                  </g>
                 </svg>
                 <p class='brand-title'>DASA</p>
                 <div class='brand-divider'></div>
@@ -3144,12 +3167,13 @@ def main() -> None:
         st.markdown(
             """
             <div class='upload-panel'>
-                <svg width='36' height='36' viewBox='0 0 24 24' fill='none' style='margin-bottom:6px;'>
-                  <path d='M12 16V4m0 0L8 8m4-4l4 4' stroke='#0A8B8D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>
-                  <path d='M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2' stroke='#14A3A5' stroke-width='2' stroke-linecap='round'/>
+                <svg width='48' height='48' viewBox='0 0 24 24' fill='none' style='margin-bottom:8px;opacity:0.7;'>
+                  <path d='M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4' stroke='#0A8B8D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>
+                  <path d='M17 8l-5-5-5 5' stroke='#0A8B8D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>
+                  <path d='M12 3v12' stroke='#14A3A5' stroke-width='1.5' stroke-linecap='round'/>
                 </svg>
-                <h3>Entrada de Arquivo</h3>
-                <p>Arraste ou selecione sua planilha</p>
+                <h3>Enviar Planilha</h3>
+                <p>Arraste ou selecione seu arquivo .xlsx / .xls para iniciar a análise</p>
             </div>
             """,
             unsafe_allow_html=True,
