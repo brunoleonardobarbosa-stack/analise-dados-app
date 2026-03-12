@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 APP_VERSION = "2.4.0"  # Alterar a cada entrega
 
@@ -35,8 +35,7 @@ REQUIRED_COLUMNS: list[str] = [
     "FABRICANTE",
     "DATA_ABERTURA",
     "FALHA",
-    "CRITICIDADE",
-]
+    "CRITICIDADE"]
 
 OPTIONAL_DATE_COLUMNS: list[str] = ["DATA_FECHAMENTO"]
 
@@ -114,7 +113,7 @@ def normalize_column_key(value: str) -> str:
     return text
 
 
-# ── Tema DASA unificado para Plotly ──
+# â”€â”€ Tema DASA unificado para Plotly â”€â”€
 DASA_PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(240,245,250,0.35)",
@@ -191,7 +190,7 @@ def normalize_region_label(value: str) -> str:
     text = normalize_scalar_text(value)
     key = normalize_column_key(text)
 
-    # Corrige todos os padrões para Centro-oeste, Nordeste e Sul
+    # Corrige todos os padrÃµes para Centro-oeste, Nordeste e Sul
     if any(k in key for k in ["NTO_CO", "NTOCO", "NTO_C_O"]):
         return "CENTRO-OESTE"
     if any(k in key for k in ["NTO_NE", "NTONE", "NTO_N_E"]):
@@ -361,8 +360,7 @@ def apply_filters(
         _search_cols = [
             "TAG", "MODELO", "FABRICANTE", "FALHA", "QUADRO",
             "TIPO_EQUIPAMENTO", "SOLICITANTE", "OBSERVACAO",
-            "NUMERO_CHAMADO", "ORIGEM_PROBLEMA", "CRITICIDADE",
-        ]
+            "NUMERO_CHAMADO", "ORIGEM_PROBLEMA", "CRITICIDADE"]
         mask = pd.Series(False, index=filtered.index)
         for _sc in _search_cols:
             if _sc in filtered.columns:
@@ -473,8 +471,7 @@ def build_call_detail_table(df: pd.DataFrame) -> pd.DataFrame:
             "FALHA",
             "QUADRO",
             "DATA_ABERTURA",
-            "Dias_Parado",
-        ]
+            "Dias_Parado"]
     ].rename(
         columns={
             "MODELO": "Modelo",
@@ -532,8 +529,7 @@ def build_mtbf_dataframe(df: pd.DataFrame, top_n: int = 12) -> pd.DataFrame:
                 "Fabricante",
                 "TAG",
                 "Falhas",
-                "MTBF (dias)",
-            ]
+                "MTBF (dias)"]
         )
 
     work = df.copy()
@@ -548,8 +544,7 @@ def build_mtbf_dataframe(df: pd.DataFrame, top_n: int = 12) -> pd.DataFrame:
                 "Fabricante",
                 "TAG",
                 "Falhas",
-                "MTBF (dias)",
-            ]
+                "MTBF (dias)"]
         )
 
     group_cols = ["MODELO", "FABRICANTE", "TAG"]
@@ -727,8 +722,7 @@ def build_preventiva_corretiva_intervalo(df: pd.DataFrame, max_interval_days: in
         "Faixa de Dias",
         "Intervalo (dias)",
         "Falha Corretiva",
-        "Criticidade",
-    ]
+        "Criticidade"]
 
     def resolve_faixa(delta_days: float) -> str | None:
         if delta_days <= 2:
@@ -825,7 +819,7 @@ def render_mtbf_section(filtered: pd.DataFrame) -> None:
     st.markdown(
         """
         <span style='font-size:1.45rem;font-weight:800;'>Fiabilidade e Historico de Equipamentos (MTBF) - Top 10
-            <span title='Lógica: calcula média dos intervalos entre falhas para cada equipamento (MTBF).' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='18' height='18' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='11' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
+            <span title='LÃ³gica: calcula mÃ©dia dos intervalos entre falhas para cada equipamento (MTBF).' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='18' height='18' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='11' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
         </span>
         """,
         unsafe_allow_html=True,
@@ -845,7 +839,7 @@ def render_mtbf_section(filtered: pd.DataFrame) -> None:
     with c1:
         st.markdown("""
             <span style='font-size:1.1rem;font-weight:700;'>Modelos com maior recorrencia de falhas
-                <span title='Lógica: ordena modelos por quantidade de falhas para priorizar manutenção.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='16' height='16' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='10' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
+                <span title='LÃ³gica: ordena modelos por quantidade de falhas para priorizar manutenÃ§Ã£o.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='16' height='16' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='10' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
             </span>
         """, unsafe_allow_html=True)
         st.dataframe(mtbf_df, use_container_width=True, hide_index=True)
@@ -865,7 +859,7 @@ def render_mtbf_section(filtered: pd.DataFrame) -> None:
 
         st.markdown("""
             <span style='font-size:1.1rem;font-weight:700;'>Problema Relatado x Origem do Problema
-                <span title='Lógica: agrupa falhas por origem para identificar causas recorrentes.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='16' height='16' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='10' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
+                <span title='LÃ³gica: agrupa falhas por origem para identificar causas recorrentes.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='16' height='16' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='10' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
             </span>
         """, unsafe_allow_html=True)
         if root_df.empty:
@@ -943,8 +937,7 @@ def open_calls_table(df: pd.DataFrame) -> pd.DataFrame:
             "SOLICITANTE_OUT",
             "OBSERVACAO_OUT",
             "DIAS_PARADO",
-            "FALHA",
-        ]
+            "FALHA"]
     ].rename(
         columns={
             "QUADRO": "Quadro de Trabalho",
@@ -961,6 +954,64 @@ def open_calls_table(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return result.sort_values(by="Tipo de Equipamento", ascending=True, kind="stable")
+
+
+def closed_calls_table(df: pd.DataFrame) -> pd.DataFrame:
+    """Retorna DataFrame formatado dos chamados FECHADOS com tempo de resolucao."""
+    status_norm = df["STATUS"].map(normalize_status)
+    fechados = df[status_norm == "FECHADO"].copy()
+
+    if fechados.empty:
+        return pd.DataFrame()
+
+    # Tempo de resolucao em dias
+    if "DATA_FECHAMENTO" in fechados.columns:
+        duracao = (fechados["DATA_FECHAMENTO"] - fechados["DATA_ABERTURA"]).dt.days
+        fechados["DIAS_RESOLUCAO"] = pd.to_numeric(duracao, errors="coerce").fillna(-1).astype(int)
+    else:
+        fechados["DIAS_RESOLUCAO"] = -1
+
+    ticket_number_col = resolve_ticket_number_column(fechados)
+    fechados["NUMERO_CHAMADO_OUT"] = (
+        fechados[ticket_number_col].astype("string").fillna("-") if ticket_number_col else "-"
+    )
+
+    requester_col = resolve_requester_column(fechados)
+    fechados["SOLICITANTE_OUT"] = (
+        fechados[requester_col].astype("string").fillna("-") if requester_col else "-"
+    )
+
+    def _fmt_date(s):
+        if s.empty:
+            return s
+        return pd.to_datetime(s, errors="coerce").dt.strftime("%d/%m/%Y").fillna("-")
+
+    cols_out = ["QUADRO", "NUMERO_CHAMADO_OUT", "TIPO_EQUIPAMENTO", "TAG", "MODELO", "FABRICANTE"]
+    rename_map = {
+        "QUADRO": "Quadro", "NUMERO_CHAMADO_OUT": "Chamado",
+        "TIPO_EQUIPAMENTO": "Tipo Equipamento", "TAG": "TAG",
+        "MODELO": "Modelo", "FABRICANTE": "Fabricante",
+    }
+
+    if "DATA_ABERTURA" in fechados.columns:
+        fechados["ABERTURA_FMT"] = _fmt_date(fechados["DATA_ABERTURA"])
+        cols_out.append("ABERTURA_FMT")
+        rename_map["ABERTURA_FMT"] = "Abertura"
+
+    if "DATA_FECHAMENTO" in fechados.columns:
+        fechados["FECHAMENTO_FMT"] = _fmt_date(fechados["DATA_FECHAMENTO"])
+        cols_out.append("FECHAMENTO_FMT")
+        rename_map["FECHAMENTO_FMT"] = "Fechamento"
+
+    cols_out += ["DIAS_RESOLUCAO", "SOLICITANTE_OUT", "FALHA"]
+    rename_map["DIAS_RESOLUCAO"] = "Dias p/ Resolver"
+    rename_map["SOLICITANTE_OUT"] = "Solicitante"
+    rename_map["FALHA"] = "Falha"
+
+    available = [c for c in cols_out if c in fechados.columns]
+    result = fechados[available].rename(columns=rename_map)
+    return result.sort_values(by="Dias p/ Resolver", ascending=False, kind="stable")
+
 
 
 def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.DataFrame) -> None:
@@ -1139,39 +1190,38 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
             "Disponibilidade Global",
             f"{format_percent_pt_br(max(0.0, 100.0 - percentual_cancelados))}%",
             "Baseado em cancelamentos",
-            "Funcao: mede a estabilidade operacional usando o percentual de chamados nao cancelados.\nLógica: 100% - percentual_cancelados = 100% - (cancelados/total)*100",
+            "Funcao: mede a estabilidade operacional usando o percentual de chamados nao cancelados.\nLÃ³gica: 100% - percentual_cancelados = 100% - (cancelados/total)*100",
         ),
         (
             "Chamados Criticos em Aberto",
             format_int_pt_br(int(metrics["alta_criticidade_abertos"])),
             "Criticidade ALTA ativa",
-            "Funcao: destaca urgencias em aberto para priorizacao imediata.\nLógica: quantidade de chamados com STATUS=ABERTO e CRITICIDADE=ALTA",
+            "Funcao: destaca urgencias em aberto para priorizacao imediata.\nLÃ³gica: quantidade de chamados com STATUS=ABERTO e CRITICIDADE=ALTA",
         ),
         (
             "Tempo Medio de Atendimento",
             mttr_text,
             "Meta operacional: <= 15 dias",
-            "Funcao: acompanha o tempo medio para concluir chamados e controlar eficiencia.\nLógica: média dos dias entre DATA_ABERTURA e DATA_FECHAMENTO para chamados fechados",
+            "Funcao: acompanha o tempo medio para concluir chamados e controlar eficiencia.\nLÃ³gica: mÃ©dia dos dias entre DATA_ABERTURA e DATA_FECHAMENTO para chamados fechados",
         ),
         (
             "Volume de Chamados",
             f"{format_int_pt_br(int(metrics['abertos']))} / {format_int_pt_br(fechados)}",
             "Abertos / Fechados",
-            "Funcao: compara carga atual (abertos) com capacidade de resolucao (fechados).\nLógica: abertos = STATUS=ABERTO, fechados = STATUS=FECHADO",
+            "Funcao: compara carga atual (abertos) com capacidade de resolucao (fechados).\nLÃ³gica: abertos = STATUS=ABERTO, fechados = STATUS=FECHADO",
         ),
         (
             "Backlog >30 dias",
             format_int_pt_br(backlog_30),
             "Fila com maior risco",
-            "Funcao: mostra chamados envelhecidos com maior risco de impacto operacional.\nLógica: quantidade de chamados abertos com Faixa '>30 dias'",
+            "Funcao: mostra chamados envelhecidos com maior risco de impacto operacional.\nLÃ³gica: quantidade de chamados abertos com Faixa '>30 dias'",
         ),
         (
             "Taxa de Fechamento",
             f"{format_percent_pt_br(taxa_fechamento)}%",
             "Fechados sobre total",
-            "Funcao: indica efetividade do time na conversao de chamados em resolucoes.\nLógica: (fechados/total)*100",
-        ),
-    ]
+            "Funcao: indica efetividade do time na conversao de chamados em resolucoes.\nLÃ³gica: (fechados/total)*100",
+        )]
 
     card_blocks: list[str] = []
     for title, value, trend, tip in cards:
@@ -1261,9 +1311,9 @@ def apply_executive_styles() -> None:
     st.markdown(
         """
         <style>
-        /* ═══════════════════════════════════════════════════
-           TEMA DASA — Azul Corporativo + Laranja Energia
-           ═══════════════════════════════════════════════════ */
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+           TEMA DASA â€” Azul Corporativo + Laranja Energia
+           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(22px); }
@@ -1335,7 +1385,7 @@ def apply_executive_styles() -> None:
             margin-top: 0;
         }
 
-        /* ── Scrollbar personalizada ── */
+        /* â”€â”€ Scrollbar personalizada â”€â”€ */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -1358,7 +1408,7 @@ def apply_executive_styles() -> None:
             animation: fadeIn 0.6s ease-out;
         }
 
-        /* ── Painéis (glassmorphism) ── */
+        /* â”€â”€ PainÃ©is (glassmorphism) â”€â”€ */
         .ec-panel {
             background: rgba(255, 255, 255, 0.82);
             backdrop-filter: blur(12px) saturate(1.6);
@@ -1399,7 +1449,7 @@ def apply_executive_styles() -> None:
             margin-bottom: 0;
         }
 
-        /* ── Status pills ── */
+        /* â”€â”€ Status pills â”€â”€ */
         .ec-status-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1441,7 +1491,7 @@ def apply_executive_styles() -> None:
             margin-top: 2px;
         }
 
-        /* ── Detail cards ── */
+        /* â”€â”€ Detail cards â”€â”€ */
         .ec-detail-card {
             background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
             border: 1px solid var(--ec-border);
@@ -1489,7 +1539,7 @@ def apply_executive_styles() -> None:
             font-weight: 500;
         }
 
-        /* ── Summary grid ── */
+        /* â”€â”€ Summary grid â”€â”€ */
         .ec-summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1553,7 +1603,7 @@ def apply_executive_styles() -> None:
             margin-bottom: 8px;
         }
 
-        /* ── SIDEBAR PREMIUM ── */
+        /* â”€â”€ SIDEBAR PREMIUM â”€â”€ */
         section[data-testid="stSidebar"] {
             background: linear-gradient(180deg, #00274d 0%, var(--dasa-blue) 30%, #002952 100%);
             border-right: none;
@@ -1683,7 +1733,7 @@ def apply_executive_styles() -> None:
             border-color: rgba(255,106,19,0.4);
         }
 
-        /* ── Headings & Metrics ── */
+        /* â”€â”€ Headings & Metrics â”€â”€ */
         div[data-testid="stMetricValue"] {
             color: var(--dasa-blue);
             font-weight: 900;
@@ -1694,7 +1744,7 @@ def apply_executive_styles() -> None:
             font-weight: 800 !important;
         }
 
-        /* ── DataFrames ── */
+        /* â”€â”€ DataFrames â”€â”€ */
         div[data-testid="stDataFrame"] {
             border: 1px solid var(--ec-border);
             border-radius: 14px;
@@ -1710,7 +1760,7 @@ def apply_executive_styles() -> None:
             background: linear-gradient(90deg, var(--dasa-blue) 0%, var(--dasa-orange) 100%);
         }
 
-        /* ── Buttons ── */
+        /* â”€â”€ Buttons â”€â”€ */
         .stButton > button,
         .stDownloadButton > button {
             border-radius: 10px;
@@ -1758,7 +1808,7 @@ def apply_executive_styles() -> None:
             box-shadow: 0 6px 16px rgba(255, 106, 19, 0.15);
         }
 
-        /* ── Inputs premium ── */
+        /* â”€â”€ Inputs premium â”€â”€ */
         div[data-testid="stRadio"] label p {
             white-space: nowrap;
             word-break: normal;
@@ -1809,7 +1859,7 @@ def apply_executive_styles() -> None:
             border-radius: 10px;
         }
 
-        /* ── Alertas redesenhados ── */
+        /* â”€â”€ Alertas redesenhados â”€â”€ */
         div[data-testid="stAlert"] {
             border-radius: 12px;
             border: none;
@@ -1836,7 +1886,7 @@ def apply_executive_styles() -> None:
             border-radius: 12px;
         }
 
-        /* ── Expanders ── */
+        /* â”€â”€ Expanders â”€â”€ */
         div[data-testid="stExpander"] details {
             border: 1px solid var(--ec-border);
             border-radius: 14px !important;
@@ -1863,7 +1913,7 @@ def apply_executive_styles() -> None:
             background: rgba(0,59,113,0.04);
         }
 
-        /* ── Header ── */
+        /* â”€â”€ Header â”€â”€ */
         header[data-testid="stHeader"] {
             background: linear-gradient(90deg, var(--dasa-blue) 0%, #004d8f 60%, var(--dasa-orange) 100%);
             background-size: 200% 100%;
@@ -1880,7 +1930,7 @@ def apply_executive_styles() -> None:
             z-index: 1000;
         }
 
-        /* ── BRAND HEADER PROFISSIONAL ── */
+        /* â”€â”€ BRAND HEADER PROFISSIONAL â”€â”€ */
         .brand-wrap {
             display: flex;
             justify-content: center;
@@ -1970,7 +2020,7 @@ def apply_executive_styles() -> None:
             text-transform: uppercase;
         }
 
-        /* ── Tabs premium ── */
+        /* â”€â”€ Tabs premium â”€â”€ */
         .stTabs [data-baseweb="tab-list"] {
             gap: 4px;
             background: rgba(255,255,255,0.6);
@@ -2001,7 +2051,7 @@ def apply_executive_styles() -> None:
             box-shadow: 0 4px 12px rgba(0,59,113,0.2);
         }
 
-        /* ── Charts ── */
+        /* â”€â”€ Charts â”€â”€ */
         div[data-testid="stPlotlyChart"] {
             width: 100%;
             animation: fadeIn 0.6s ease-out;
@@ -2012,7 +2062,7 @@ def apply_executive_styles() -> None:
             background: #ffffff;
         }
 
-        /* ── Section dividers ── */
+        /* â”€â”€ Section dividers â”€â”€ */
         .section-divider {
             height: 2px;
             background: linear-gradient(90deg, transparent, var(--dasa-blue-light), var(--dasa-orange), transparent);
@@ -2021,7 +2071,7 @@ def apply_executive_styles() -> None:
             animation: fadeIn 0.8s ease-out;
         }
 
-        /* ── Footer ── */
+        /* â”€â”€ Footer â”€â”€ */
         .app-footer {
             text-align: center;
             padding: 16px 0 8px 0;
@@ -2043,7 +2093,7 @@ def apply_executive_styles() -> None:
             color: var(--dasa-orange);
         }
 
-        /* ── Responsive ── */
+        /* â”€â”€ Responsive â”€â”€ */
         @media (max-width: 1200px) {
             .main .block-container {
                 padding-left: 0.9rem;
@@ -2101,7 +2151,7 @@ def apply_executive_styles() -> None:
             }
         }
 
-        /* ── Tipografia DASA para st.caption ── */
+        /* â”€â”€ Tipografia DASA para st.caption â”€â”€ */
         [data-testid="stCaptionContainer"] p,
         .stCaption p {
             color: #4a6a8a !important;
@@ -2141,7 +2191,7 @@ def render_risk_panel(metrics: dict[str, int | float | str | None], aging_df: pd
     st.markdown("<div class='ec-panel'>", unsafe_allow_html=True)
     st.markdown("""
         <span style='font-size:1.45rem;font-weight:800;'>Painel de Risco Operacional
-            <span title='Lógica: destaca chamados com maior risco operacional para decisão rápida.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='18' height='18' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='11' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
+            <span title='LÃ³gica: destaca chamados com maior risco operacional para decisÃ£o rÃ¡pida.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='18' height='18' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='11' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
         </span>
     """, unsafe_allow_html=True)
     st.markdown("<div class='ec-section-subtitle'>Sinalizacao rapida para tomada de decisao.</div>", unsafe_allow_html=True)
@@ -2461,13 +2511,12 @@ def to_executive_pdf_bytes(
                 TableStyle(
                     [
                         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cfd8e6")),
-                        ("FONTSIZE", (0, 0), (-1, -1), font_size),
-                    ]
+                        ("FONTSIZE", (0, 0), (-1, -1), font_size)]
                 )
             )
             return t
 
-        # Corrige valores '-' em colunas numéricas para evitar erro de conversão
+        # Corrige valores '-' em colunas numÃ©ricas para evitar erro de conversÃ£o
         view = df.head(max_rows).copy()
         for col in view.columns:
             if pd.api.types.is_numeric_dtype(view[col]):
@@ -2496,8 +2545,7 @@ def to_executive_pdf_bytes(
                     ("LEFTPADDING", (0, 0), (-1, -1), 3),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 3),
                     ("TOPPADDING", (0, 0), (-1, -1), 2),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-                ]
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]
             )
         )
         return table
@@ -2514,8 +2562,7 @@ def to_executive_pdf_bytes(
     kpi_rows = [
         ["Disponibilidade", fmt_pct(disponibilidade), "Chamados Criticos", fmt_int(int(metrics.get("alta_criticidade_abertos", 0)))],
         ["Tempo Medio", mttr_text, "Taxa de Fechamento", fmt_pct(taxa_fechamento)],
-        ["Abertos", fmt_int(int(metrics.get("abertos", 0))), "Cancelados", f"{fmt_int(cancelados)} ({fmt_pct(percentual_cancelados)})"],
-    ]
+        ["Abertos", fmt_int(int(metrics.get("abertos", 0))), "Cancelados", f"{fmt_int(cancelados)} ({fmt_pct(percentual_cancelados)})"]]
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -2563,7 +2610,7 @@ def to_executive_pdf_bytes(
 
     elements: list[object] = []
     brand_header = Paragraph(
-        "<font color='#07155f'><b>DASA</b></font><br/><font color='#ff5a1f'><b>Engenharia Clínica - AC</b></font>",
+        "<font color='#07155f'><b>DASA</b></font><br/><font color='#ff5a1f'><b>Engenharia ClÃ­nica - AC</b></font>",
         brand_box_style,
     )
     brand_table = Table([[brand_header]], colWidths=[110 * mm], hAlign="CENTER")
@@ -2576,8 +2623,7 @@ def to_executive_pdf_bytes(
                 ("LEFTPADDING", (0, 0), (-1, -1), 8),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ]
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]
         )
     )
     elements.append(brand_table)
@@ -2602,8 +2648,7 @@ def to_executive_pdf_bytes(
                 ("LEFTPADDING", (0, 0), (-1, -1), 6),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                 ("TOPPADDING", (0, 0), (-1, -1), 5),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ]
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]
         )
     )
     elements.append(kpi_table)
@@ -2713,7 +2758,7 @@ def to_open_calls_by_quadro_pdf_bytes(df_open: pd.DataFrame, filtros_texto: str)
 
     elements: list[object] = []
     brand_header = Paragraph(
-        "<font color='#07155f'><b>DASA</b></font><br/><font color='#ff5a1f'><b>Engenharia Clínica - AC</b></font>",
+        "<font color='#07155f'><b>DASA</b></font><br/><font color='#ff5a1f'><b>Engenharia ClÃ­nica - AC</b></font>",
         brand_box_style,
     )
     brand_table = Table([[brand_header]], colWidths=[110 * mm], hAlign="CENTER")
@@ -2726,8 +2771,7 @@ def to_open_calls_by_quadro_pdf_bytes(df_open: pd.DataFrame, filtros_texto: str)
                 ("LEFTPADDING", (0, 0), (-1, -1), 8),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ]
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]
         )
     )
     elements.append(brand_table)
@@ -2788,8 +2832,7 @@ def to_open_calls_by_quadro_pdf_bytes(df_open: pd.DataFrame, filtros_texto: str)
                     ("RIGHTPADDING", (0, 0), (-1, -1), 3),
                     ("TOPPADDING", (0, 0), (-1, -1), 2),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fbff")]),
-                ]
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fbff")])]
             )
         )
 
@@ -2805,7 +2848,7 @@ def to_open_calls_by_quadro_pdf_bytes(df_open: pd.DataFrame, filtros_texto: str)
 
 
 def main() -> None:
-    st.set_page_config(page_title="Engenharia Clinica", page_icon="🛠️", layout="wide")
+    st.set_page_config(page_title="Engenharia Clinica", page_icon="ðŸ› ï¸", layout="wide")
     apply_executive_styles()
     app_build_id = get_app_build_id()
     build_label = get_build_label(app_build_id)
@@ -2828,7 +2871,7 @@ def main() -> None:
                 </svg>
                 <p class='brand-title'>DASA</p>
                 <div class='brand-divider'></div>
-                <p class='brand-subtitle'>Engenharia Clínica — AC</p>
+                <p class='brand-subtitle'>Engenharia ClÃ­nica â€” AC</p>
             </div>
         </div>
         """,
@@ -2877,13 +2920,13 @@ def main() -> None:
         )
         st.caption("Colunas detectadas no arquivo: " + ", ".join(df.columns.tolist()))
         st.caption("Modelo esperado: Regiao, Quadro, Status, Tipo_Equipamento, Tag, Modelo, Fabricante, Data_Abertura, Falha, Criticidade")
-        # Não bloqueia a extração, segue com o processamento
+        # NÃ£o bloqueia a extraÃ§Ã£o, segue com o processamento
 
     with st.sidebar:
-        # ── Cabecalho ──
+        # â”€â”€ Cabecalho â”€â”€
         st.markdown("### :bar_chart: Painel de Filtros")
         c_info1, c_info2 = st.columns(2)
-        c_info1.caption(f"v{APP_VERSION} · {build_label}")
+        c_info1.caption(f"v{APP_VERSION} Â· {build_label}")
         c_info2.caption(st.session_state.get("uploaded_file_name", "-"))
         if st.button(":arrows_counterclockwise: Trocar arquivo", use_container_width=True):
             st.session_state["uploaded_file_bytes"] = None
@@ -2892,7 +2935,7 @@ def main() -> None:
 
         st.divider()
 
-        # ── Opcoes disponiveis ──
+        # â”€â”€ Opcoes disponiveis â”€â”€
         regiao_options = ["TODAS"] + sorted([x for x in df["REGIAO"].dropna().unique().tolist() if x])
         quadro_options = sorted([x for x in df["QUADRO"].dropna().unique().tolist() if x])
         tag_options = sorted([x for x in df["TAG"].dropna().astype("string").tolist() if str(x).strip()])
@@ -2904,7 +2947,7 @@ def main() -> None:
         min_data = data_validas.min().date() if not data_validas.empty else None
         max_data = data_validas.max().date() if not data_validas.empty else None
 
-        # ── Inicializacao de session_state ──
+        # â”€â”€ Inicializacao de session_state â”€â”€
         if "regiao_filter" not in st.session_state:
             st.session_state["regiao_filter"] = "TODAS"
         if st.session_state["regiao_filter"] not in regiao_options:
@@ -2937,7 +2980,7 @@ def main() -> None:
             if st.session_state["data_final"] < min_data or st.session_state["data_final"] > max_data:
                 st.session_state["data_final"] = max_data
 
-        # ── Secao 1: Quadro de Trabalho ──
+        # â”€â”€ Secao 1: Quadro de Trabalho â”€â”€
         with st.expander(":clipboard: Quadro de Trabalho", expanded=True):
             quadro_search = st.text_input(
                 "Buscar quadro",
@@ -2998,7 +3041,7 @@ def main() -> None:
 
             st.session_state["quadro_filter"] = selected_quadros if qtd_sel < len(quadro_options) else []
 
-        # ── Secao 2: Tipo de Servico ──
+        # â”€â”€ Secao 2: Tipo de Servico â”€â”€
         with st.expander(":wrench: Tipo de Servico", expanded=False):
             st.radio(
                 "Tipo de servico",
@@ -3017,7 +3060,7 @@ def main() -> None:
             if not has_tipo_servico:
                 st.caption(":warning: Coluna TIPO_SERVICO nao encontrada.")
 
-        # ── Secao 4: Periodo ──
+        # â”€â”€ Secao 4: Periodo â”€â”€
         with st.expander(":calendar: Periodo", expanded=True):
             if min_data and max_data:
                 di = st.date_input(
@@ -3043,7 +3086,7 @@ def main() -> None:
             else:
                 st.caption(":warning: Datas indisponiveis na planilha.")
 
-        # ── Secao 5: Pesquisa Global ──
+        # â”€â”€ Secao 5: Pesquisa Global â”€â”€
         with st.expander(":mag: Pesquisa Global", expanded=True):
             st.caption(":earth_americas: Busca em TAG, Modelo, Fabricante, Falha, Quadro, Tipo Equipamento, Solicitante, Observacao e mais.")
             st.text_input(
@@ -3072,7 +3115,7 @@ def main() -> None:
 
         st.divider()
 
-        # ── Botao Limpar Tudo ──
+        # â”€â”€ Botao Limpar Tudo â”€â”€
         if st.button(":wastebasket: Limpar todos os filtros", use_container_width=True, type="secondary"):
             st.session_state["quadro_filter"] = []
             st.session_state["tipo_servico_filter"] = "TODOS"
@@ -3124,8 +3167,7 @@ def main() -> None:
         tipo_servico_filter != "TODOS",
         tag_search_filter.strip() != "",
         data_inicial != min_data if data_inicial and min_data else False,
-        data_final != max_data if data_final and max_data else False,
-    ])
+        data_final != max_data if data_final and max_data else False])
     filter_id = build_filter_id(filter_state)
     if st.session_state.get("last_filter_state") != filter_state:
         st.session_state["last_filter_state"] = filter_state
@@ -3150,7 +3192,7 @@ def main() -> None:
                 border-left:4px solid #FF6A13; border-radius:8px;
                 backdrop-filter:blur(6px); margin-bottom:8px;
             '>
-                <span style='font-size:1.6rem;'>🔍</span>
+                <span style='font-size:1.6rem;'>ðŸ”</span>
                 <span style='font-weight:700;color:#003B71;font-size:0.95rem;'>
                     {filtros_ativos_count} filtro(s) ativo(s)
                 </span>
@@ -3169,9 +3211,9 @@ def main() -> None:
                 background:rgba(0,59,113,0.05); border-left:4px solid #003B71;
                 border-radius:8px; margin-bottom:8px;
             '>
-                <span style='font-size:1.6rem;'>📊</span>
+                <span style='font-size:1.6rem;'>ðŸ“Š</span>
                 <span style='color:#1a3c5e;font-size:0.9rem;'>
-                    {len(df)} registros · Nenhum filtro ativo — exibindo todos os dados
+                    {len(df)} registros Â· Nenhum filtro ativo â€” exibindo todos os dados
                 </span>
             </div>
             """,
@@ -3214,14 +3256,13 @@ def main() -> None:
         f"ID={filter_id}"
     )
 
-    st.caption(f"v{APP_VERSION} · Build {build_label} · Filtro {filter_id} · {filtros_texto_display_l1} · {filtros_texto_display_l2}")
+    st.caption(f"v{APP_VERSION} Â· Build {build_label} Â· Filtro {filter_id} Â· {filtros_texto_display_l1} Â· {filtros_texto_display_l2}")
 
     tab1, tab2, tab3, tab4 = st.tabs([
         "Dashboard Gerencial",
         "Relatorio Detalhado (Abertos)",
         "Fiabilidade e Historico (MTBF)",
-        "Pos-Preventiva (<=30 dias)",
-    ])
+        "Pos-Preventiva (<=30 dias)"])
 
     with tab1:
         st.subheader("Painel Executivo Operacional")
@@ -3269,7 +3310,7 @@ def main() -> None:
         with col1:
             st.markdown("""
                 <span style='font-size:1.45rem;font-weight:800;'>Analise de Aging de Chamados
-                    <span title='Lógica: distribui chamados por faixa de dias para identificar gargalos e backlog.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='18' height='18' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='11' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
+                    <span title='LÃ³gica: distribui chamados por faixa de dias para identificar gargalos e backlog.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='18' height='18' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='11' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
                 </span>
             """, unsafe_allow_html=True)
             color_map = {
@@ -3313,7 +3354,7 @@ def main() -> None:
         with col2:
             st.markdown("""
                 <span style='font-size:1.45rem;font-weight:800;'>Pareto de Custos x Falhas
-                    <span title='Lógica: ordena falhas por quantidade para priorizar causas e custos mais relevantes.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='18' height='18' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='11' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
+                    <span title='LÃ³gica: ordena falhas por quantidade para priorizar causas e custos mais relevantes.' style='display:inline-block;vertical-align:middle;cursor:help;'><svg width='18' height='18' viewBox='0 0 18 18'><circle cx='9' cy='9' r='8' fill='#e6effa' stroke='#b8c8dd'/><text x='9' y='13' text-anchor='middle' font-size='11' font-weight='bold' fill='#1e4b7a'>i</text></svg></span>
                 </span>
             """, unsafe_allow_html=True)
             fig_pareto = px.bar(
@@ -3412,8 +3453,7 @@ def main() -> None:
             [
                 ("Chamados em Aberto", f"{total_abertos}"),
                 ("Media de Dias Parado", f"{media_parado} dias"),
-                ("Pior SLA Atual", f"{max_parado} dias"),
-            ]
+                ("Pior SLA Atual", f"{max_parado} dias")]
         )
 
         st.markdown("### Lista Operacional")
@@ -3684,6 +3724,7 @@ def main() -> None:
 
                 st.dataframe(p2c_view, use_container_width=True, hide_index=True)
 
+
     if st.session_state.get("details_modal_open") and st.session_state.get("details_modal_kind") == "root_cause":
         modelo = st.session_state.get("selected_root_modelo")
         fabricante = st.session_state.get("selected_root_fabricante")
@@ -3706,16 +3747,16 @@ def main() -> None:
                 preformatted=True,
             )
 
-    # ── Footer profissional ──
+    # â”€â”€ Footer profissional â”€â”€
     st.markdown(
         """
         <div class='section-divider'></div>
         <div class='app-footer'>
             <p class='app-footer-text'>
                 <span class='app-footer-brand'>DASA</span>
-                <span class='app-footer-accent'> · </span>
-                Engenharia Clínica — Painel Analítico
-                <span class='app-footer-accent'> · </span>
+                <span class='app-footer-accent'> Â· </span>
+                Engenharia ClÃ­nica â€” Painel AnalÃ­tico
+                <span class='app-footer-accent'> Â· </span>
                 Desenvolvido com Streamlit
             </p>
         </div>
