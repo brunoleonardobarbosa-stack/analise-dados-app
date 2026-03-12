@@ -3250,15 +3250,16 @@ def send_email_report(
         msg.attach(img_part)
 
     try:
+        pwd = cfg["app_password"].replace(" ", "")
         with smtplib.SMTP(cfg["smtp_server"], cfg["smtp_port"], timeout=30) as server:
             server.ehlo()
             server.starttls()
             server.ehlo()
-            server.login(cfg["sender"], cfg["app_password"])
+            server.login(cfg["sender"], pwd)
             server.sendmail(cfg["sender"], destinatarios, msg.as_string())
         return "ok"
-    except smtplib.SMTPAuthenticationError:
-        return "Falha de autenticacao. Verifique a Senha de App no secrets.toml."
+    except smtplib.SMTPAuthenticationError as exc:
+        return f"Falha de autenticacao ({exc.smtp_code}). Verifique e-mail/senha de app."
     except smtplib.SMTPException as exc:
         return f"Erro SMTP: {exc}"
     except Exception as exc:
