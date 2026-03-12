@@ -28,3 +28,6 @@ exe_*.log
 
 # IDE
 .vscode/
+
+# Secrets (API keys)
+.streamlit/secrets.toml
