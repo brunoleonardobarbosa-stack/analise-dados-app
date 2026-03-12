@@ -3927,6 +3927,22 @@ def main() -> None:
             st.info(pdf_quadro_error)
 
         # ── Envio de e-mail ──
+        # Mapeamento automatico: padrao no nome do quadro → destinatarios
+        _EMAIL_MAP = {
+            "D969": "Bruno.barbosa@dasa.com.br",
+        }
+
+        def _resolve_default_dest(quadros: list[str]) -> str:
+            """Retorna destinatarios pre-preenchidos com base nos quadros filtrados."""
+            emails: list[str] = []
+            for pattern, addr in _EMAIL_MAP.items():
+                if any(pattern.upper() in q.upper() for q in quadros):
+                    if addr not in emails:
+                        emails.append(addr)
+            return ", ".join(emails)
+
+        default_dest = _resolve_default_dest(quadro_filter)
+
         with st.expander("Enviar relatorio por e-mail", expanded=False, icon="📧"):
             email_cfg = _get_email_config()
             if email_cfg is None:
@@ -3940,6 +3956,7 @@ def main() -> None:
                 )
                 dest_input = st.text_input(
                     "Destinatarios",
+                    value=default_dest,
                     placeholder="email1@exemplo.com, email2@exemplo.com",
                     key="email_destinatarios",
                 )
