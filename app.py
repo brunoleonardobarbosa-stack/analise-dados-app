@@ -3927,9 +3927,12 @@ def main() -> None:
             st.info(pdf_quadro_error)
 
         # ── Envio de e-mail ──
-        email_cfg = _get_email_config()
-        if email_cfg is not None:
-            with st.expander("Enviar relatorio por e-mail", expanded=False, icon="📧"):
+        with st.expander("Enviar relatorio por e-mail", expanded=False, icon="📧"):
+            email_cfg = _get_email_config()
+            if email_cfg is None:
+                st.info("Credenciais de e-mail nao configuradas. "
+                        "Adicione a secao [email] em .streamlit/secrets.toml ou nos Secrets do Streamlit Cloud.")
+            else:
                 st.markdown(
                     "<p style='font-size:0.88rem;color:#555'>Envie o relatorio como imagens das "
                     "paginas do PDF diretamente no corpo do e-mail.</p>",
