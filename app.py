@@ -963,6 +963,68 @@ def open_calls_table(df: pd.DataFrame) -> pd.DataFrame:
     return result.sort_values(by="Tipo de Equipamento", ascending=True, kind="stable")
 
 
+def closed_calls_table(df: pd.DataFrame) -> pd.DataFrame:
+    status_norm = df["STATUS"].map(normalize_status)
+    fechados = df[status_norm == "FECHADO"].copy()
+
+    if "DATA_FECHAMENTO" in fechados.columns and not fechados.empty:
+        fechados["DIAS_RESOLUCAO"] = (fechados["DATA_FECHAMENTO"] - fechados["DATA_ABERTURA"]).dt.days
+    else:
+        fechados["DIAS_RESOLUCAO"] = 0
+    fechados["DIAS_RESOLUCAO"] = pd.to_numeric(fechados["DIAS_RESOLUCAO"], errors="coerce").fillna(0).clip(lower=0).astype(int)
+
+    ticket_number_col = resolve_ticket_number_column(fechados)
+    fechados["NUMERO_CHAMADO_OUT"] = (
+        fechados[ticket_number_col].astype("string").fillna("-") if ticket_number_col else "-"
+    )
+
+    requester_col = resolve_requester_column(fechados)
+    fechados["SOLICITANTE_OUT"] = (
+        fechados[requester_col].astype("string").fillna("-") if requester_col else "-"
+    )
+
+    observation_col = resolve_observation_column(fechados)
+    fechados["OBSERVACAO_OUT"] = (
+        fechados[observation_col].astype("string").fillna("-") if observation_col else "-"
+    )
+
+    def _fmt_date(s: pd.Series) -> pd.Series:
+        return s.dt.strftime("%d/%m/%Y").fillna("-") if not s.empty else pd.Series(dtype="object")
+
+    fechados["DATA_ABERTURA_FMT"] = _fmt_date(fechados["DATA_ABERTURA"])
+    if "DATA_FECHAMENTO" in fechados.columns:
+        fechados["DATA_FECHAMENTO_FMT"] = _fmt_date(fechados["DATA_FECHAMENTO"])
+    else:
+        fechados["DATA_FECHAMENTO_FMT"] = "-"
+
+    cols_out = [
+        "QUADRO", "REGIAO", "NUMERO_CHAMADO_OUT", "TIPO_EQUIPAMENTO", "TAG",
+        "MODELO", "FABRICANTE", "SOLICITANTE_OUT", "FALHA", "CRITICIDADE",
+        "DATA_ABERTURA_FMT", "DATA_FECHAMENTO_FMT", "DIAS_RESOLUCAO", "OBSERVACAO_OUT",
+    ]
+    cols_present = [c for c in cols_out if c in fechados.columns]
+
+    rename_map = {
+        "QUADRO": "Quadro de Trabalho",
+        "REGIAO": "Regiao",
+        "NUMERO_CHAMADO_OUT": "Numero do Chamado",
+        "TIPO_EQUIPAMENTO": "Tipo de Equipamento",
+        "TAG": "TAG",
+        "MODELO": "Modelo",
+        "FABRICANTE": "Fabricante",
+        "SOLICITANTE_OUT": "Solicitante",
+        "FALHA": "Falha",
+        "CRITICIDADE": "Criticidade",
+        "DATA_ABERTURA_FMT": "Data Abertura",
+        "DATA_FECHAMENTO_FMT": "Data Fechamento",
+        "DIAS_RESOLUCAO": "Dias para Resolver",
+        "OBSERVACAO_OUT": "Observacao",
+    }
+
+    result = fechados[cols_present].rename(columns=rename_map)
+    return result.sort_values(by="Dias para Resolver", ascending=False, kind="stable")
+
+
 def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.DataFrame) -> None:
     st.markdown(
         """
@@ -3216,11 +3278,12 @@ def main() -> None:
 
     st.caption(f"v{APP_VERSION} · Build {build_label} · Filtro {filter_id} · {filtros_texto_display_l1} · {filtros_texto_display_l2}")
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "Dashboard Gerencial",
         "Relatorio Detalhado (Abertos)",
         "Fiabilidade e Historico (MTBF)",
         "Pos-Preventiva (<=30 dias)",
+        "Detalhamento de Fechados",
     ])
 
     with tab1:
@@ -3683,6 +3746,109 @@ def main() -> None:
                         st.rerun()
 
                 st.dataframe(p2c_view, use_container_width=True, hide_index=True)
+
+    with tab5:
+        st.subheader("Detalhamento de Chamados Fechados")
+        closed_df = closed_calls_table(filtered)
+
+        total_fechados = int(len(closed_df))
+        if total_fechados == 0:
+            st.info("Nenhum chamado fechado para os filtros selecionados.")
+        else:
+            media_resolucao = int(closed_df["Dias para Resolver"].mean()) if not closed_df.empty else 0
+            max_resolucao = int(closed_df["Dias para Resolver"].max()) if not closed_df.empty else 0
+            min_resolucao = int(closed_df["Dias para Resolver"].min()) if not closed_df.empty else 0
+            dentro_sla = int((closed_df["Dias para Resolver"] <= 15).sum())
+            perc_sla = (dentro_sla / total_fechados * 100.0) if total_fechados > 0 else 0.0
+
+            render_summary_cards(
+                [
+                    ("Total Fechados", f"{total_fechados}"),
+                    ("Media de Resolucao", f"{media_resolucao} dias"),
+                    ("Melhor SLA", f"{min_resolucao} dias"),
+                    ("Pior SLA", f"{max_resolucao} dias"),
+                    ("Dentro do SLA (<=15d)", f"{dentro_sla} ({perc_sla:.1f}%)"),
+                ]
+            )
+
+            # -- Distribuicao de tempo de resolucao --
+            st.markdown("### Distribuicao do Tempo de Resolucao")
+            bins = [-1, 3, 7, 15, 30, 60, float("inf")]
+            labels_faixa = ["0-3 dias", "4-7 dias", "8-15 dias", "16-30 dias", "31-60 dias", ">60 dias"]
+            closed_df["Faixa Resolucao"] = pd.cut(
+                closed_df["Dias para Resolver"], bins=bins, labels=labels_faixa, right=True,
+            )
+            faixa_counts = (
+                closed_df["Faixa Resolucao"]
+                .value_counts()
+                .reindex(labels_faixa, fill_value=0)
+                .rename_axis("Faixa")
+                .reset_index(name="Quantidade")
+            )
+            fig_resolucao = px.bar(
+                faixa_counts, x="Faixa", y="Quantidade", text_auto=True,
+                color="Faixa",
+                color_discrete_map={
+                    "0-3 dias": "#22c55e", "4-7 dias": "#84cc16",
+                    "8-15 dias": "#facc15", "16-30 dias": "#fb923c",
+                    "31-60 dias": "#ef4444", ">60 dias": "#991b1b",
+                },
+            )
+            apply_dasa_plotly_theme(fig_resolucao)
+            fig_resolucao.update_layout(showlegend=False, xaxis_title="Faixa de Resolucao", yaxis_title="Chamados")
+            st.plotly_chart(fig_resolucao, use_container_width=True, key="closed_resolucao_chart")
+
+            # -- Top falhas nos fechados --
+            st.markdown("### Top Falhas (Fechados)")
+            top_falhas = (
+                closed_df["Falha"].value_counts().head(10).rename_axis("Falha").reset_index(name="Quantidade")
+            )
+            fig_falhas = px.bar(
+                top_falhas.sort_values("Quantidade", ascending=True),
+                x="Quantidade", y="Falha", orientation="h", text_auto=True,
+                color_discrete_sequence=["#003B71"],
+            )
+            apply_dasa_plotly_theme(fig_falhas)
+            fig_falhas.update_layout(xaxis_title="Quantidade", yaxis_title="Falha")
+            st.plotly_chart(fig_falhas, use_container_width=True, key="closed_top_falhas_chart")
+
+            # -- Fechados por quadro de trabalho --
+            st.markdown("### Fechados por Quadro de Trabalho")
+            por_quadro = (
+                closed_df.groupby("Quadro de Trabalho", as_index=False)
+                .agg(Quantidade=("Quadro de Trabalho", "size"), Media_Dias=("Dias para Resolver", "mean"))
+                .sort_values("Quantidade", ascending=False)
+            )
+            por_quadro["Media_Dias"] = por_quadro["Media_Dias"].round(1)
+            fig_quadro = px.bar(
+                por_quadro, x="Quadro de Trabalho", y="Quantidade", text_auto=True,
+                color="Media_Dias", color_continuous_scale="Blues",
+                labels={"Media_Dias": "Media dias"},
+            )
+            apply_dasa_plotly_theme(fig_quadro)
+            fig_quadro.update_layout(xaxis_title="Quadro", yaxis_title="Chamados Fechados")
+            st.plotly_chart(fig_quadro, use_container_width=True, key="closed_por_quadro_chart")
+
+            # -- Tabela completa --
+            st.markdown("### Lista Completa de Chamados Fechados")
+            display_cols = [c for c in closed_df.columns if c != "Faixa Resolucao"]
+            st.dataframe(closed_df[display_cols], use_container_width=True, hide_index=True)
+
+            d1, d2 = st.columns(2)
+            d1.download_button(
+                label="Baixar fechados (CSV)",
+                data=to_csv_bytes(closed_df[display_cols]),
+                file_name="relatorio_chamados_fechados.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+            d2.download_button(
+                label="Baixar fechados (Excel)",
+                data=to_excel_bytes(closed_df[display_cols]),
+                file_name="relatorio_chamados_fechados.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
 
     if st.session_state.get("details_modal_open") and st.session_state.get("details_modal_kind") == "root_cause":
         modelo = st.session_state.get("selected_root_modelo")
