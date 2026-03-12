@@ -3983,16 +3983,18 @@ def main() -> None:
                     "paginas do PDF diretamente no corpo do e-mail.</p>",
                     unsafe_allow_html=True,
                 )
+                if "email_destinatarios" not in st.session_state and default_dest:
+                    st.session_state["email_destinatarios"] = default_dest
                 dest_input = st.text_input(
                     "Destinatarios",
-                    value=default_dest,
                     placeholder="email1@exemplo.com, email2@exemplo.com",
                     key="email_destinatarios",
                     help="Separe multiplos e-mails por virgula. Apague e digite novos se quiser enviar para outros.",
                 )
 
                 if st.button("Enviar e-mail", type="primary", use_container_width=True, key="btn_send_email"):
-                    destinatarios = [d.strip() for d in dest_input.split(",") if d.strip() and "@" in d]
+                    final_dest = dest_input.strip() if dest_input.strip() else default_dest
+                    destinatarios = [d.strip() for d in final_dest.split(",") if d.strip() and "@" in d]
                     if not destinatarios:
                         st.warning("Informe ao menos um e-mail valido.")
                     elif pdf_quadro_bytes is None:
