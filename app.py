@@ -16,6 +16,12 @@ import plotly.graph_objects as go
 import streamlit as st
 
 try:
+    import google.generativeai as genai
+    HAS_GENAI = True
+except ImportError:
+    HAS_GENAI = False
+
+try:
     from reportlab.lib import colors as rl_colors
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -382,6 +388,86 @@ def apply_filters(
             filtered = filtered[abertura_dia <= pd.Timestamp(data_final)]
 
     return filtered
+
+
+# ── Assistente IA (Gemini) ──
+
+def _build_data_summary(df: pd.DataFrame, metrics: dict) -> str:
+    """Gera um resumo textual dos dados para contexto da IA."""
+    status_norm = df["STATUS"].map(normalize_status)
+    abertos = df[status_norm == "ABERTO"]
+    fechados_count = int(metrics.get("fechados", 0))
+    cancelados = int(metrics.get("cancelados", 0))
+    total = int(metrics.get("total", 0))
+    mttr = metrics.get("mttr")
+
+    today = pd.Timestamp.now().normalize()
+    aging_30 = 0
+    if not abertos.empty:
+        dias = (today - abertos["DATA_ABERTURA"]).dt.days
+        aging_30 = int((dias > 30).sum())
+
+    top_falhas = ""
+    if "FALHA" in df.columns:
+        top = df["FALHA"].value_counts().head(5)
+        top_falhas = "\n".join(f"  - {f}: {c}" for f, c in top.items())
+
+    top_equipamentos = ""
+    if "TIPO_EQUIPAMENTO" in df.columns:
+        top_eq = abertos["TIPO_EQUIPAMENTO"].value_counts().head(5)
+        top_equipamentos = "\n".join(f"  - {e}: {c}" for e, c in top_eq.items())
+
+    quadros = ""
+    if "QUADRO" in df.columns:
+        q = abertos["QUADRO"].value_counts().head(5)
+        quadros = "\n".join(f"  - {qu}: {c}" for qu, c in q.items())
+
+    criticidade = ""
+    if "CRITICIDADE" in df.columns and not abertos.empty:
+        crit = abertos["CRITICIDADE"].value_counts()
+        criticidade = "\n".join(f"  - {cr}: {c}" for cr, c in crit.items())
+
+    return (
+        f"RESUMO OPERACIONAL DA ENGENHARIA CLINICA:\n"
+        f"- Total de chamados no filtro: {total}\n"
+        f"- Chamados abertos: {int(metrics.get('abertos', 0))}\n"
+        f"- Chamados fechados: {fechados_count}\n"
+        f"- Chamados cancelados: {cancelados} ({metrics.get('percentual_cancelados', 0):.1f}%)\n"
+        f"- Criticidade ALTA abertos: {int(metrics.get('alta_criticidade_abertos', 0))}\n"
+        f"- Chamados abertos ha mais de 30 dias (backlog): {aging_30}\n"
+        f"- Tempo medio de atendimento (MTTR): {mttr if mttr else 'N/A'} dias\n"
+        f"\nTOP 5 FALHAS MAIS FREQUENTES:\n{top_falhas if top_falhas else '  Nenhuma'}\n"
+        f"\nTOP 5 EQUIPAMENTOS COM MAIS CHAMADOS ABERTOS:\n{top_equipamentos if top_equipamentos else '  Nenhum'}\n"
+        f"\nCHAMADOS ABERTOS POR QUADRO DE TRABALHO:\n{quadros if quadros else '  Nenhum'}\n"
+        f"\nCRITICIDADE DOS CHAMADOS ABERTOS:\n{criticidade if criticidade else '  N/A'}\n"
+    )
+
+
+def _get_gemini_response(api_key: str, data_summary: str, user_question: str, history: list[dict]) -> str:
+    """Envia pergunta para o Gemini com contexto dos dados."""
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.0-flash")
+
+    system_prompt = (
+        "Voce e um assistente de IA especializado em Engenharia Clinica hospitalar. "
+        "Seu papel e ajudar gestores a tomar decisoes baseadas nos dados de chamados de manutencao. "
+        "Responda sempre em portugues brasileiro, de forma clara, objetiva e profissional. "
+        "Use os dados fornecidos para embasar suas respostas. "
+        "Quando fizer recomendacoes, seja especifico e pratico. "
+        "Formate suas respostas com marcadores e secoes quando apropriado.\n\n"
+        f"DADOS ATUAIS DO DASHBOARD:\n{data_summary}"
+    )
+
+    contents = [{"role": "user", "parts": [{"text": system_prompt}]}]
+    contents.append({"role": "model", "parts": [{"text": "Entendido. Estou pronto para ajudar com a gestao da Engenharia Clinica. Como posso ajudar?"}]})
+
+    for msg in history:
+        contents.append({"role": msg["role"], "parts": [{"text": msg["content"]}]})
+
+    contents.append({"role": "user", "parts": [{"text": user_question}]})
+
+    response = model.generate_content(contents)
+    return response.text
 
 
 @st.cache_data(show_spinner=False)
@@ -3278,11 +3364,12 @@ def main() -> None:
 
     st.caption(f"v{APP_VERSION} · Build {build_label} · Filtro {filter_id} · {filtros_texto_display_l1} · {filtros_texto_display_l2}")
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "Dashboard Gerencial",
         "Relatorio Detalhado (Abertos)",
         "Fiabilidade e Historico (MTBF)",
         "Pos-Preventiva (<=30 dias)",
+        "Assistente IA",
     ])
 
     with tab1:
@@ -3745,6 +3832,84 @@ def main() -> None:
                         st.rerun()
 
                 st.dataframe(p2c_view, use_container_width=True, hide_index=True)
+
+    with tab5:
+        st.subheader("Assistente IA — Suporte Gerencial")
+        st.markdown(
+            "<div class='ec-section-subtitle'>"
+            "Converse com a IA para obter insights, recomendacoes e analises sobre seus dados de Engenharia Clinica."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        if not HAS_GENAI:
+            st.error("Biblioteca google-generativeai nao instalada. Execute: pip install google-generativeai")
+        else:
+            gemini_key = st.secrets.get("GEMINI_API_KEY", "") if hasattr(st, "secrets") else ""
+            if not gemini_key:
+                gemini_key = os.environ.get("GEMINI_API_KEY", "")
+
+            if not gemini_key:
+                st.info(
+                    "Configure sua chave da API do Google Gemini para usar o assistente.\n\n"
+                    "Adicione no arquivo `.streamlit/secrets.toml`:\n"
+                    "```\nGEMINI_API_KEY = \"sua-chave-aqui\"\n```\n"
+                    "Ou defina a variavel de ambiente `GEMINI_API_KEY`."
+                )
+                gemini_key = st.text_input("Ou cole sua API Key do Gemini aqui:", type="password", key="gemini_key_input")
+
+            if gemini_key:
+                ia_metrics = compute_metrics(filtered)
+                data_summary = _build_data_summary(filtered, ia_metrics)
+
+                if "ia_messages" not in st.session_state:
+                    st.session_state["ia_messages"] = []
+
+                # Sugestoes rapidas
+                st.markdown("**Perguntas sugeridas:**")
+                col_s1, col_s2, col_s3 = st.columns(3)
+                with col_s1:
+                    if st.button("Qual a situacao geral?", key="ia_sug1"):
+                        st.session_state["ia_pending"] = "Faca um resumo executivo da situacao atual da engenharia clinica com base nos dados."
+                with col_s2:
+                    if st.button("Quais acoes priorizar?", key="ia_sug2"):
+                        st.session_state["ia_pending"] = "Quais acoes devo priorizar hoje com base nos dados atuais? Liste em ordem de urgencia."
+                with col_s3:
+                    if st.button("Riscos e alertas?", key="ia_sug3"):
+                        st.session_state["ia_pending"] = "Identifique os principais riscos operacionais e pontos de atencao com base nos dados atuais."
+
+                st.markdown("---")
+
+                # Historico de mensagens
+                for msg in st.session_state["ia_messages"]:
+                    with st.chat_message(msg["role"] if msg["role"] == "user" else "assistant"):
+                        st.markdown(msg["content"])
+
+                # Input do usuario
+                pending = st.session_state.pop("ia_pending", None)
+                user_input = st.chat_input("Pergunte algo sobre seus dados...", key="ia_chat_input")
+                question = pending or user_input
+
+                if question:
+                    st.session_state["ia_messages"].append({"role": "user", "content": question})
+                    with st.chat_message("user"):
+                        st.markdown(question)
+
+                    with st.chat_message("assistant"):
+                        with st.spinner("Analisando dados..."):
+                            try:
+                                history = [m for m in st.session_state["ia_messages"][:-1]]
+                                response = _get_gemini_response(gemini_key, data_summary, question, history)
+                                st.markdown(response)
+                                st.session_state["ia_messages"].append({"role": "model", "content": response})
+                            except Exception as exc:
+                                error_msg = f"Erro ao consultar a IA: {exc}"
+                                st.error(error_msg)
+
+                if st.session_state.get("ia_messages"):
+                    if st.button("Limpar conversa", key="ia_clear"):
+                        st.session_state["ia_messages"] = []
+                        st.rerun()
 
     if st.session_state.get("details_modal_open") and st.session_state.get("details_modal_kind") == "root_cause":
         modelo = st.session_state.get("selected_root_modelo")
