@@ -384,6 +384,255 @@ def apply_filters(
     return filtered
 
 
+# ── Engine de Inteligência Analítica (local, sem API externa) ──
+
+def _ia_classificar_severidade(valor: float, limites: tuple[float, float]) -> str:
+    if valor >= limites[1]:
+        return "CRITICO"
+    elif valor >= limites[0]:
+        return "ATENCAO"
+    return "OK"
+
+
+def _ia_icone_severidade(sev: str) -> str:
+    return {"CRITICO": "🔴", "ATENCAO": "🟡", "OK": "🟢"}.get(sev, "⚪")
+
+
+def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
+    """Analisa o DataFrame filtrado e retorna um diagnóstico completo."""
+    today = pd.Timestamp.now().normalize()
+    status_norm = df["STATUS"].map(normalize_status)
+
+    abertos_mask = status_norm == "ABERTO"
+    fechados_mask = status_norm == "FECHADO"
+    cancelados_mask = status_norm == "CANCELADO"
+
+    abertos = df[abertos_mask].copy()
+    fechados = df[fechados_mask].copy()
+    total = len(df)
+    n_abertos = int(abertos_mask.sum())
+    n_fechados = int(fechados_mask.sum())
+    n_cancelados = int(cancelados_mask.sum())
+
+    # ── Aging ──
+    if not abertos.empty:
+        abertos["_DIAS"] = (today - abertos["DATA_ABERTURA"]).dt.days.fillna(0).clip(lower=0)
+    else:
+        abertos["_DIAS"] = pd.Series(dtype="int64")
+
+    backlog_30 = int((abertos["_DIAS"] > 30).sum()) if not abertos.empty else 0
+    backlog_60 = int((abertos["_DIAS"] > 60).sum()) if not abertos.empty else 0
+    media_aging = float(abertos["_DIAS"].mean()) if not abertos.empty else 0.0
+
+    # ── Criticidade ──
+    alta_abertos = int((abertos["CRITICIDADE"] == "ALTA").sum()) if not abertos.empty else 0
+
+    # ── MTTR ──
+    mttr = None
+    if "DATA_FECHAMENTO" in df.columns and not fechados.empty:
+        dur = (fechados["DATA_FECHAMENTO"] - fechados["DATA_ABERTURA"]).dt.days
+        dur_valida = dur[dur.notna() & (dur >= 0)]
+        if not dur_valida.empty:
+            mttr = float(dur_valida.mean())
+
+    # ── Taxa fechamento ──
+    taxa_fechamento = (n_fechados / total * 100) if total > 0 else 0.0
+    taxa_cancelamento = (n_cancelados / total * 100) if total > 0 else 0.0
+
+    # ── Top falhas recorrentes ──
+    top_falhas = []
+    if "FALHA" in df.columns and not abertos.empty:
+        falha_counts = abertos["FALHA"].value_counts().head(5)
+        top_falhas = [(str(f), int(c)) for f, c in falha_counts.items()]
+
+    # ── Equipamentos mais problemáticos ──
+    equip_problematicos = []
+    if not abertos.empty:
+        eq = abertos.groupby(["MODELO", "FABRICANTE"], as_index=False).agg(
+            Chamados=("MODELO", "size"),
+            Media_Dias=("_DIAS", "mean"),
+            Alta_Crit=("CRITICIDADE", lambda s: int((s == "ALTA").sum())),
+        ).sort_values(["Chamados", "Media_Dias"], ascending=False).head(5)
+        for _, row in eq.iterrows():
+            equip_problematicos.append({
+                "modelo": str(row["MODELO"]),
+                "fabricante": str(row["FABRICANTE"]),
+                "chamados": int(row["Chamados"]),
+                "media_dias": round(float(row["Media_Dias"]), 1),
+                "alta_crit": int(row["Alta_Crit"]),
+            })
+
+    # ── Quadros sobrecarregados ──
+    quadros_ranking = []
+    if not abertos.empty and "QUADRO" in abertos.columns:
+        qr = abertos.groupby("QUADRO", as_index=False).agg(
+            Abertos=("QUADRO", "size"),
+            Media_Dias=("_DIAS", "mean"),
+            Alta_Crit=("CRITICIDADE", lambda s: int((s == "ALTA").sum())),
+        ).sort_values(["Abertos", "Alta_Crit"], ascending=False).head(5)
+        for _, row in qr.iterrows():
+            quadros_ranking.append({
+                "quadro": str(row["QUADRO"]),
+                "abertos": int(row["Abertos"]),
+                "media_dias": round(float(row["Media_Dias"]), 1),
+                "alta_crit": int(row["Alta_Crit"]),
+            })
+
+    # ── Alertas ──
+    alertas = []
+
+    sev_backlog = _ia_classificar_severidade(backlog_30, (5, 15))
+    alertas.append({
+        "titulo": "Backlog > 30 dias",
+        "valor": f"{backlog_30} chamados",
+        "severidade": sev_backlog,
+        "detalhe": f"{backlog_60} deles com mais de 60 dias" if backlog_60 else "Nenhum acima de 60 dias",
+    })
+
+    sev_crit = _ia_classificar_severidade(alta_abertos, (5, 10))
+    alertas.append({
+        "titulo": "Alta Criticidade em Aberto",
+        "valor": f"{alta_abertos} chamados",
+        "severidade": sev_crit,
+        "detalhe": "Equipamentos criticos aguardando atendimento" if alta_abertos > 0 else "Sem pendencias criticas",
+    })
+
+    sev_mttr = _ia_classificar_severidade(mttr if mttr else 0, (15, 25))
+    alertas.append({
+        "titulo": "Tempo Medio de Resolucao (MTTR)",
+        "valor": f"{int(mttr)} dias" if mttr else "N/A",
+        "severidade": sev_mttr,
+        "detalhe": "Acima da meta de 15 dias" if mttr and mttr > 15 else "Dentro da meta operacional",
+    })
+
+    sev_cancel = _ia_classificar_severidade(taxa_cancelamento, (8, 15))
+    alertas.append({
+        "titulo": "Taxa de Cancelamento",
+        "valor": f"{taxa_cancelamento:.1f}%",
+        "severidade": sev_cancel,
+        "detalhe": f"{n_cancelados} chamados cancelados de {total} total",
+    })
+
+    sev_aging = _ia_classificar_severidade(media_aging, (14, 25))
+    alertas.append({
+        "titulo": "Idade Media dos Chamados Abertos",
+        "valor": f"{media_aging:.0f} dias",
+        "severidade": sev_aging,
+        "detalhe": "Indica velocidade geral de atendimento",
+    })
+
+    # ── Recomendações inteligentes ──
+    recomendacoes = []
+
+    if backlog_60 >= 5:
+        recomendacoes.append(("URGENTE", "Executar forca-tarefa imediata para os {0} chamados com mais de 60 dias. Priorizar por criticidade.".format(backlog_60)))
+    if backlog_30 >= 15:
+        recomendacoes.append(("ALTA", "Criar mutirao semanal para reduzir backlog >30 dias (atualmente {0} chamados).".format(backlog_30)))
+    elif backlog_30 >= 5:
+        recomendacoes.append(("MEDIA", "Agendar janela para reducao gradual do backlog >30 dias ({0} chamados).".format(backlog_30)))
+
+    if alta_abertos >= 10:
+        recomendacoes.append(("URGENTE", "Mobilizar equipe para atender {0} chamados de alta criticidade hoje.".format(alta_abertos)))
+    elif alta_abertos >= 5:
+        recomendacoes.append(("ALTA", "Priorizar atendimento dos {0} chamados de alta criticidade no primeiro turno.".format(alta_abertos)))
+
+    if mttr and mttr > 25:
+        recomendacoes.append(("ALTA", "MTTR em {0} dias esta muito acima da meta. Revisar checklists e disponibilidade de pecas.".format(int(mttr))))
+    elif mttr and mttr > 15:
+        recomendacoes.append(("MEDIA", "MTTR em {0} dias. Avaliar gargalos no fluxo de atendimento.".format(int(mttr))))
+
+    if taxa_cancelamento >= 15:
+        recomendacoes.append(("ALTA", "Taxa de cancelamento em {0:.1f}%. Revisar criterios de abertura com a operacao.".format(taxa_cancelamento)))
+
+    if equip_problematicos and equip_problematicos[0]["chamados"] >= 5:
+        eq = equip_problematicos[0]
+        recomendacoes.append(("MEDIA", "Equipamento {0} ({1}) lidera com {2} chamados abertos. Avaliar substituicao ou contrato de manutencao.".format(eq["modelo"], eq["fabricante"], eq["chamados"])))
+
+    if not recomendacoes:
+        recomendacoes.append(("INFO", "Operacao estavel. Manter rotina de prevencao e monitoramento."))
+
+    # ── Nota geral (0-100) ──
+    nota = 100.0
+    if backlog_30 >= 15:
+        nota -= 25
+    elif backlog_30 >= 5:
+        nota -= 12
+    if alta_abertos >= 10:
+        nota -= 25
+    elif alta_abertos >= 5:
+        nota -= 12
+    if mttr and mttr > 25:
+        nota -= 20
+    elif mttr and mttr > 15:
+        nota -= 10
+    if taxa_cancelamento >= 15:
+        nota -= 15
+    elif taxa_cancelamento >= 8:
+        nota -= 7
+    if media_aging > 25:
+        nota -= 15
+    elif media_aging > 14:
+        nota -= 7
+    nota = max(0, min(100, nota))
+
+    if nota >= 80:
+        nota_label = "Excelente"
+        nota_cor = "#22c55e"
+    elif nota >= 60:
+        nota_label = "Bom"
+        nota_cor = "#84cc16"
+    elif nota >= 40:
+        nota_label = "Atencao"
+        nota_cor = "#facc15"
+    elif nota >= 20:
+        nota_label = "Critico"
+        nota_cor = "#fb923c"
+    else:
+        nota_label = "Emergencial"
+        nota_cor = "#ef4444"
+
+    # ── Resumo executivo textual ──
+    resumo_partes = []
+    resumo_partes.append(f"A operacao possui **{n_abertos} chamados abertos** de um total de **{total}** no periodo filtrado.")
+    resumo_partes.append(f"A taxa de fechamento e de **{taxa_fechamento:.1f}%** e a taxa de cancelamento e de **{taxa_cancelamento:.1f}%**.")
+    if backlog_30 > 0:
+        resumo_partes.append(f"Ha **{backlog_30} chamados com mais de 30 dias** em aberto, representando risco de backlog.")
+    if alta_abertos > 0:
+        resumo_partes.append(f"Existem **{alta_abertos} chamados de alta criticidade** aguardando atendimento.")
+    if mttr:
+        meta_txt = "dentro da meta" if mttr <= 15 else "**acima da meta de 15 dias**"
+        resumo_partes.append(f"O tempo medio de resolucao (MTTR) e de **{int(mttr)} dias**, {meta_txt}.")
+    if equip_problematicos:
+        eq = equip_problematicos[0]
+        resumo_partes.append(f"O equipamento mais demandado e **{eq['modelo']}** ({eq['fabricante']}) com **{eq['chamados']} chamados abertos**.")
+    resumo_executivo = " ".join(resumo_partes)
+
+    return {
+        "nota": nota,
+        "nota_label": nota_label,
+        "nota_cor": nota_cor,
+        "resumo_executivo": resumo_executivo,
+        "alertas": alertas,
+        "recomendacoes": recomendacoes,
+        "top_falhas": top_falhas,
+        "equip_problematicos": equip_problematicos,
+        "quadros_ranking": quadros_ranking,
+        "metricas": {
+            "abertos": n_abertos,
+            "fechados": n_fechados,
+            "cancelados": n_cancelados,
+            "total": total,
+            "backlog_30": backlog_30,
+            "backlog_60": backlog_60,
+            "media_aging": media_aging,
+            "alta_abertos": alta_abertos,
+            "mttr": mttr,
+            "taxa_fechamento": taxa_fechamento,
+            "taxa_cancelamento": taxa_cancelamento,
+        },
+    }
+
+
 @st.cache_data(show_spinner=False)
 def compute_metrics(df: pd.DataFrame) -> dict[str, int | float | str | None]:
     status_norm = df["STATUS"].map(normalize_status)
@@ -3278,11 +3527,12 @@ def main() -> None:
 
     st.caption(f"v{APP_VERSION} · Build {build_label} · Filtro {filter_id} · {filtros_texto_display_l1} · {filtros_texto_display_l2}")
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "Dashboard Gerencial",
         "Relatorio Detalhado (Abertos)",
         "Fiabilidade e Historico (MTBF)",
         "Pos-Preventiva (<=30 dias)",
+        "Inteligencia Analitica",
     ])
 
     with tab1:
@@ -3745,6 +3995,122 @@ def main() -> None:
                         st.rerun()
 
                 st.dataframe(p2c_view, use_container_width=True, hide_index=True)
+
+    with tab5:
+        st.subheader("Inteligencia Analitica — Diagnostico Automatico")
+        st.markdown(
+            "<div class='ec-section-subtitle'>"
+            "Analise inteligente baseada nos dados filtrados. Sem dependencia de APIs externas."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        diag = gerar_diagnostico_inteligente(filtered)
+
+        # ── Nota Geral ──
+        st.markdown(
+            f"<div style='text-align:center;padding:1.5rem 0;'>"
+            f"<div style='font-size:1.1rem;color:#64748b;font-weight:600;'>NOTA OPERACIONAL</div>"
+            f"<div style='font-size:4rem;font-weight:900;color:{diag['nota_cor']};line-height:1.1;'>{diag['nota']:.0f}</div>"
+            f"<div style='font-size:1.3rem;font-weight:700;color:{diag['nota_cor']};'>{diag['nota_label']}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+        # ── Resumo Executivo ──
+        st.markdown("### Resumo Executivo")
+        st.markdown(diag["resumo_executivo"])
+
+        st.markdown("---")
+
+        # ── Painel de Alertas ──
+        st.markdown("### Painel de Alertas")
+        alertas_html = "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0.8rem;'>"
+        for alerta in diag["alertas"]:
+            icone = _ia_icone_severidade(alerta["severidade"])
+            bg = {"CRITICO": "#fef2f2", "ATENCAO": "#fffbeb", "OK": "#f0fdf4"}.get(alerta["severidade"], "#f8fafc")
+            border = {"CRITICO": "#fca5a5", "ATENCAO": "#fde68a", "OK": "#86efac"}.get(alerta["severidade"], "#e2e8f0")
+            alertas_html += (
+                f"<div style='background:{bg};border:1px solid {border};border-radius:8px;padding:1rem;'>"
+                f"<div style='font-size:1.1rem;font-weight:700;'>{icone} {alerta['titulo']}</div>"
+                f"<div style='font-size:1.5rem;font-weight:900;margin:0.3rem 0;'>{alerta['valor']}</div>"
+                f"<div style='font-size:0.85rem;color:#64748b;'>{alerta['detalhe']}</div>"
+                f"</div>"
+            )
+        alertas_html += "</div>"
+        st.markdown(alertas_html, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # ── Recomendações Priorizadas ──
+        st.markdown("### Recomendacoes Priorizadas")
+        prioridade_cores = {"URGENTE": "#ef4444", "ALTA": "#fb923c", "MEDIA": "#facc15", "INFO": "#3b82f6"}
+        for i, (prioridade, texto) in enumerate(diag["recomendacoes"], 1):
+            cor = prioridade_cores.get(prioridade, "#64748b")
+            st.markdown(
+                f"<div style='display:flex;align-items:flex-start;gap:0.8rem;margin-bottom:0.6rem;'>"
+                f"<span style='background:{cor};color:#fff;font-weight:800;font-size:0.75rem;padding:0.25rem 0.6rem;border-radius:4px;white-space:nowrap;'>{prioridade}</span>"
+                f"<span style='font-size:0.95rem;'>{texto}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("---")
+
+        col_ia1, col_ia2 = st.columns(2)
+
+        with col_ia1:
+            # ── Equipamentos Problemáticos ──
+            st.markdown("### Equipamentos Mais Demandados")
+            if diag["equip_problematicos"]:
+                eq_df = pd.DataFrame(diag["equip_problematicos"])
+                eq_df.columns = ["Modelo", "Fabricante", "Chamados", "Media Dias", "Alta Crit."]
+                st.dataframe(eq_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum equipamento com chamados abertos.")
+
+        with col_ia2:
+            # ── Quadros Sobrecarregados ──
+            st.markdown("### Quadros Mais Sobrecarregados")
+            if diag["quadros_ranking"]:
+                qr_df = pd.DataFrame(diag["quadros_ranking"])
+                qr_df.columns = ["Quadro", "Abertos", "Media Dias", "Alta Crit."]
+                st.dataframe(qr_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum quadro com chamados abertos.")
+
+        st.markdown("---")
+
+        # ── Top Falhas ──
+        st.markdown("### Top 5 Falhas Mais Recorrentes (Abertos)")
+        if diag["top_falhas"]:
+            falha_df = pd.DataFrame(diag["top_falhas"], columns=["Falha", "Quantidade"])
+            fig_falha_ia = px.bar(
+                falha_df.sort_values("Quantidade", ascending=True),
+                x="Quantidade", y="Falha", orientation="h", text_auto=True,
+                color_discrete_sequence=["#003B71"],
+            )
+            apply_dasa_plotly_theme(fig_falha_ia)
+            fig_falha_ia.update_layout(xaxis_title="Quantidade", yaxis_title="")
+            st.plotly_chart(fig_falha_ia, use_container_width=True, key="ia_top_falhas_chart")
+        else:
+            st.info("Sem falhas registradas nos chamados abertos.")
+
+        # ── Métricas detalhadas ──
+        st.markdown("---")
+        st.markdown("### Metricas Detalhadas")
+        m = diag["metricas"]
+        met_cols = st.columns(6)
+        met_labels = [
+            ("Abertos", str(m["abertos"])),
+            ("Fechados", str(m["fechados"])),
+            ("Cancelados", str(m["cancelados"])),
+            ("Backlog >30d", str(m["backlog_30"])),
+            ("MTTR", f"{int(m['mttr'])}d" if m["mttr"] else "N/A"),
+            ("Tx Fechamento", f"{m['taxa_fechamento']:.1f}%"),
+        ]
+        for col, (label, val) in zip(met_cols, met_labels):
+            col.metric(label, val)
 
     if st.session_state.get("details_modal_open") and st.session_state.get("details_modal_kind") == "root_cause":
         modelo = st.session_state.get("selected_root_modelo")
