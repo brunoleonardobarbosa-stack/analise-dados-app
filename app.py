@@ -3166,7 +3166,8 @@ import fitz  # PyMuPDF
 
 
 def _get_email_config() -> dict | None:
-    """Retorna config de e-mail do secrets.toml ou None se nao configurado."""
+    """Retorna config de e-mail do secrets.toml, session_state ou None."""
+    # 1) Tenta secrets.toml / Streamlit Cloud secrets
     try:
         cfg = st.secrets["email"]
         return {
@@ -3176,7 +3177,12 @@ def _get_email_config() -> dict | None:
             "app_password": cfg["app_password"],
         }
     except Exception:
-        return None
+        pass
+    # 2) Fallback: credenciais inseridas via UI (session_state)
+    ss = st.session_state.get("_email_cfg_manual")
+    if ss and ss.get("sender") and ss.get("app_password"):
+        return ss
+    return None
 
 
 def _pdf_pages_to_images(pdf_bytes: bytes, dpi: int = 150) -> list[bytes]:
@@ -3946,8 +3952,24 @@ def main() -> None:
         with st.expander("Enviar relatorio por e-mail", expanded=False, icon="📧"):
             email_cfg = _get_email_config()
             if email_cfg is None:
-                st.info("Credenciais de e-mail nao configuradas. "
-                        "Adicione a secao [email] em .streamlit/secrets.toml ou nos Secrets do Streamlit Cloud.")
+                st.markdown(
+                    "<p style='font-size:0.88rem;color:#555'>Configure as credenciais SMTP para habilitar o envio.</p>",
+                    unsafe_allow_html=True,
+                )
+                c1, c2 = st.columns(2)
+                _smtp_sender = c1.text_input("E-mail remetente", placeholder="bot@gmail.com", key="_smtp_sender")
+                _smtp_pass = c2.text_input("Senha de App", type="password", key="_smtp_pass")
+                if st.button("Salvar credenciais", key="btn_save_smtp", use_container_width=True):
+                    if _smtp_sender and _smtp_pass:
+                        st.session_state["_email_cfg_manual"] = {
+                            "smtp_server": "smtp.gmail.com",
+                            "smtp_port": 587,
+                            "sender": _smtp_sender.strip(),
+                            "app_password": _smtp_pass.strip(),
+                        }
+                        st.rerun()
+                    else:
+                        st.warning("Preencha ambos os campos.")
             else:
                 st.markdown(
                     "<p style='font-size:0.88rem;color:#555'>Envie o relatorio como imagens das "
