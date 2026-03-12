@@ -836,6 +836,16 @@ def compute_metrics(df: pd.DataFrame) -> dict[str, int | float | str | None]:
         if not duracao_valida.empty:
             mttr = int(round(float(duracao_valida.mean())))
 
+    # Contagens por tipo de serviço
+    corretiva = 0
+    preventiva = 0
+    calibracao = 0
+    if "TIPO_SERVICO" in df.columns:
+        grupos = df["TIPO_SERVICO"].map(normalize_service_group)
+        corretiva = int((grupos == "CORRETIVA").sum())
+        preventiva = int((grupos == "PREVENTIVA").sum())
+        calibracao = int((grupos == "CALIBRACAO").sum())
+
     return {
         "abertos": abertos,
         "fechados": fechados,
@@ -844,6 +854,9 @@ def compute_metrics(df: pd.DataFrame) -> dict[str, int | float | str | None]:
         "percentual_cancelados": percentual_cancelados,
         "alta_criticidade_abertos": alta_criticidade_abertos,
         "mttr": mttr,
+        "corretiva": corretiva,
+        "preventiva": preventiva,
+        "calibracao": calibracao,
     }
 
 
@@ -1582,6 +1595,24 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
             f"{format_percent_pt_br(taxa_fechamento)}%",
             "Fechados sobre total",
             "Funcao: indica efetividade do time na conversao de chamados em resolucoes.\nLógica: (fechados/total)*100",
+        ),
+        (
+            "Corretiva",
+            format_int_pt_br(int(metrics.get("corretiva", 0))),
+            "Total de chamados corretivos",
+            "Funcao: total de chamados do tipo Corretiva no periodo filtrado.\nLógica: contagem de registros com TIPO_SERVICO normalizado = CORRETIVA",
+        ),
+        (
+            "Preventiva",
+            format_int_pt_br(int(metrics.get("preventiva", 0))),
+            "Total de chamados preventivos",
+            "Funcao: total de chamados do tipo Preventiva no periodo filtrado.\nLógica: contagem de registros com TIPO_SERVICO normalizado = PREVENTIVA",
+        ),
+        (
+            "Calibração",
+            format_int_pt_br(int(metrics.get("calibracao", 0))),
+            "Total de chamados de calibração",
+            "Funcao: total de chamados do tipo Calibracao (inclui Verificacao) no periodo filtrado.\nLógica: contagem de registros com TIPO_SERVICO normalizado = CALIBRACAO",
         ),
     ]
 
