@@ -1972,47 +1972,7 @@ def apply_executive_styles() -> None:
             text-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
         }
 
-        .brand-wrap {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 1.25rem;
-        }
 
-        .brand-card {
-            border: 1px solid rgba(160, 140, 120, 0.32);
-            background: linear-gradient(145deg, rgba(255, 253, 247, 0.98), rgba(243, 234, 219, 0.84));
-            box-shadow: 0 8px 18px rgba(80, 65, 49, 0.16);
-        }
-
-        .brand-logo-dd {
-            position: relative;
-            width: 70px;
-            height: 70px;
-            margin: 0 auto 0.5rem; 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .brand-dd {
-            width: 28px;
-            height: 50px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #0a8b8d 0%, #0E7C7B 100%);
-            box-shadow: 0 4px 12px rgba(10, 139, 141, 0.6);
-            position: absolute;
-        }
-
-        .brand-dd.left { left: 0; transform: skew(12deg); }
-        .brand-dd.right { right: 0; transform: skew(-12deg); }
-        .brand-dd-text {
-            position: absolute;
-            color: rgba(255,255,255,0.95);
-            font-size: 1.85rem;
-            font-weight: 900;
-            letter-spacing: -1px;
-            z-index: 2;
-        }
 
         /* ── Scrollbar personalizada ── */
         ::-webkit-scrollbar {
@@ -3531,19 +3491,6 @@ def main() -> None:
             <div class='hero-right'></div>
         </div>
 
-        <div class='brand-wrap'>
-            <div class='brand-card'>
-                <div class='brand-glow'></div>
-                <div class='brand-logo-dd'>
-                    <div class='brand-dd left'></div>
-                    <div class='brand-dd right'></div>
-                    <div class='brand-dd-text'>D</div>
-                </div>
-                <p class='brand-title'>DASA</p>
-                <div class='brand-divider'></div>
-                <p class='brand-subtitle'>Engenharia Clínica — AC</p>
-            </div>
-        </div>
         """,
         unsafe_allow_html=True,
     )
