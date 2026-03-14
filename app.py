@@ -1446,6 +1446,40 @@ def open_calls_table(df: pd.DataFrame) -> pd.DataFrame:
     return result.sort_values(by="Tipo de Equipamento", ascending=True, kind="stable")
 
 
+def get_detail_dataframe(df: pd.DataFrame, category: str) -> pd.DataFrame:
+    status_norm = df["STATUS"].map(normalize_status)
+
+    if category == "abertos":
+        subset = df[status_norm == "ABERTO"].copy()
+    elif category == "aguardando_relatorio":
+        subset = df[status_norm == "AGUARDANDO_RELATORIO"].copy()
+    elif category == "criticos_aberto":
+        subset = df[(status_norm == "ABERTO") & (df.get("CRITICIDADE", "") == "ALTA")].copy()
+    elif category == "backlog_30":
+        subset = build_open_with_aging(df)
+        subset = subset[subset["Dias_Parado"] > 30].copy()
+    elif category == "corretiva":
+        service_normalized = df["TIPO_SERVICO"].map(normalize_service_group) if "TIPO_SERVICO" in df.columns else pd.Series([], dtype="object")
+        subset = df[(status_norm == "ABERTO") & (service_normalized == "CORRETIVA")].copy()
+    elif category == "preventiva":
+        service_normalized = df["TIPO_SERVICO"].map(normalize_service_group) if "TIPO_SERVICO" in df.columns else pd.Series([], dtype="object")
+        subset = df[(status_norm == "ABERTO") & (service_normalized == "PREVENTIVA")].copy()
+    elif category == "calibracao":
+        service_normalized = df["TIPO_SERVICO"].map(normalize_service_group) if "TIPO_SERVICO" in df.columns else pd.Series([], dtype="object")
+        subset = df[(status_norm == "ABERTO") & (service_normalized == "CALIBRACAO")].copy()
+    else:
+        subset = df.copy()
+
+    if subset.empty:
+        return subset
+
+    if "Dias_Parado" not in subset.columns and "DATA_ABERTURA" in subset.columns:
+        today = pd.Timestamp.now().normalize()
+        subset["Dias_Parado"] = (today - subset["DATA_ABERTURA"]).dt.days.fillna(0).clip(lower=0)
+
+    return build_call_detail_table(subset)
+
+
 def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.DataFrame) -> None:
     st.markdown(
         """
@@ -3794,6 +3828,37 @@ def main() -> None:
             st.info(pdf_error)
 
         render_kpi_cards(metrics, aging_df)
+
+        # Botões para detalhar equipamentos por categoria de KPI
+        detail_options = [
+            ("Chamados Abertos", "abertos"),
+            ("Aguardando Relatório", "aguardando_relatorio"),
+            ("Chamados Críticos em Aberto", "criticos_aberto"),
+            ("Backlog >30 dias", "backlog_30"),
+            ("Corretiva em Aberto", "corretiva"),
+            ("Preventiva em Aberto", "preventiva"),
+            ("Calibração em Aberto", "calibracao"),
+        ]
+
+        cols = st.columns(4)
+        for i, (label, key) in enumerate(detail_options):
+            with cols[i % 4]:
+                if st.button(f"Detalhar: {label}", key=f"btn_{key}"):
+                    st.session_state["detalhe_categoria"] = key
+
+        detalhe_categoria = st.session_state.get("detalhe_categoria")
+
+        if detalhe_categoria:
+            label = next((l for l, k in detail_options if k == detalhe_categoria), detalhe_categoria)
+            st.markdown(f"### Detalhes de {label}")
+            detail_df = get_detail_dataframe(filtered, detalhe_categoria)
+            if detail_df.empty:
+                st.info("Nenhum registro encontrado para essa categoria de detalhamento.")
+            else:
+                st.dataframe(detail_df, use_container_width=True)
+
+            if st.button("Fechar painel de detalhes", key="btn_close_detalles"):
+                st.session_state.pop("detalhe_categoria", None)
 
         st.markdown("<div class='section-divider'></div>", unsafe_allow_html=True)
 
