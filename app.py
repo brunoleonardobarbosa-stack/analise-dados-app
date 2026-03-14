@@ -1885,7 +1885,7 @@ def apply_executive_styles() -> None:
 
         .stApp {
             font-family: "Segoe UI", "Inter", "Calibri", sans-serif;
-            background: linear-gradient(135deg, #f2f7fb 0%, #ddeaf3 45%, #c9e1ee 100%);
+            background: linear-gradient(135deg, #f7f1e7 0%, #f2eadf 45%, #ebe5da 100%);
             margin-top: 0;
         }
 
@@ -1896,7 +1896,7 @@ def apply_executive_styles() -> None:
             grid-template-columns: 1fr 1fr;
             border-radius: 14px;
             overflow: hidden;
-            box-shadow: 0 10px 22px rgba(13, 30, 50, 0.30);
+            box-shadow: 0 10px 22px rgba(75, 62, 49, 0.22);
             margin-bottom: 1rem;
             position: relative;
         }
@@ -1907,8 +1907,8 @@ def apply_executive_styles() -> None:
         }
 
         .hero-left {
-            background: radial-gradient(circle at 35% 30%, rgba(6, 116, 121, 0.95) 0%, rgba(10, 139, 141, 0.90) 55%, rgba(1, 46, 54, 1) 100%);
-            color: #fff;
+            background: radial-gradient(circle at 35% 30%, rgba(232, 215, 190, 0.95) 0%, rgba(241, 226, 206, 0.90) 55%, rgba(215, 198, 175, 1) 100%);
+            color: #3f3424;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -1921,7 +1921,8 @@ def apply_executive_styles() -> None:
             background-image: url('https://images.unsplash.com/photo-1581091012184-839aaa23afab?auto=format&fit=crop&w=1800&q=80');
             background-size: cover;
             background-position: center;
-            filter: brightness(0.95);
+            filter: brightness(0.92) contrast(1.02);
+            background-color: rgba(245, 237, 224, 0.4);
         }
 
         .hero-left::before {
@@ -1932,8 +1933,8 @@ def apply_executive_styles() -> None:
             width: 130px;
             height: 130px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.18);
-            box-shadow: 0 0 32px rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.50);
+            box-shadow: 0 0 28px rgba(255, 255, 255, 0.35);
             z-index: 1;
         }
 
@@ -1978,9 +1979,9 @@ def apply_executive_styles() -> None:
         }
 
         .brand-card {
-            border: 1px solid rgba(9, 98, 103, 0.3);
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(230, 245, 245, 0.68));
-            box-shadow: 0 8px 18px rgba(22, 60, 71, 0.16);
+            border: 1px solid rgba(160, 140, 120, 0.32);
+            background: linear-gradient(145deg, rgba(255, 253, 247, 0.98), rgba(243, 234, 219, 0.84));
+            box-shadow: 0 8px 18px rgba(80, 65, 49, 0.16);
         }
 
         .brand-logo-dd {
