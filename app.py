@@ -270,6 +270,9 @@ def normalize_status(value: str) -> str:
     text = normalize_scalar_text(value)
     text_key = normalize_column_key(text)
 
+    if text_key == "AGUARDANDO_RELATORIO":
+        return "AGUARDANDO_RELATORIO"
+
     open_exact = {
         "ABERTO",
         "ABERTA",
@@ -584,6 +587,7 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
     status_norm = df["STATUS"].map(normalize_status)
 
     abertos_mask = status_norm == "ABERTO"
+    aguardando_relatorio_mask = status_norm == "AGUARDANDO_RELATORIO"
     fechados_mask = status_norm == "FECHADO"
     cancelados_mask = status_norm == "CANCELADO"
 
@@ -591,6 +595,7 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
     fechados = df[fechados_mask].copy()
     total = len(df)
     n_abertos = int(abertos_mask.sum())
+    n_aguardando_relatorio = int(aguardando_relatorio_mask.sum())
     n_fechados = int(fechados_mask.sum())
     n_cancelados = int(cancelados_mask.sum())
 
@@ -779,6 +784,8 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
         resumo_partes.append(f"Ha **{backlog_30} chamados com mais de 30 dias** em aberto, representando risco de backlog.")
     if alta_abertos > 0:
         resumo_partes.append(f"Existem **{alta_abertos} chamados de alta criticidade** aguardando atendimento.")
+    if n_aguardando_relatorio > 0:
+        resumo_partes.append(f"Ha **{n_aguardando_relatorio} chamados aguardando relatorio** (não entram em aberto).")
     if mttr:
         meta_txt = "dentro da meta" if mttr <= 15 else "**acima da meta de 15 dias**"
         resumo_partes.append(f"O tempo medio de resolucao (MTTR) e de **{int(mttr)} dias**, {meta_txt}.")
@@ -799,6 +806,7 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
         "quadros_ranking": quadros_ranking,
         "metricas": {
             "abertos": n_abertos,
+            "aguardando_relatorio": n_aguardando_relatorio,
             "fechados": n_fechados,
             "cancelados": n_cancelados,
             "total": total,
@@ -818,6 +826,7 @@ def compute_metrics(df: pd.DataFrame) -> dict[str, int | float | str | None]:
     status_norm = df["STATUS"].map(normalize_status)
 
     abertos = int((status_norm == "ABERTO").sum())
+    aguardando_relatorio = int((status_norm == "AGUARDANDO_RELATORIO").sum())
     fechados = int((status_norm == "FECHADO").sum())
     cancelados = int((status_norm == "CANCELADO").sum())
 
@@ -849,6 +858,7 @@ def compute_metrics(df: pd.DataFrame) -> dict[str, int | float | str | None]:
 
     return {
         "abertos": abertos,
+        "aguardando_relatorio": aguardando_relatorio,
         "fechados": fechados,
         "total": total,
         "cancelados": cancelados,
@@ -1584,6 +1594,12 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
             f"{format_int_pt_br(int(metrics['abertos']))} / {format_int_pt_br(fechados)}",
             "Abertos / Fechados",
             "Funcao: compara carga atual (abertos) com capacidade de resolucao (fechados).\nLógica: abertos = STATUS=ABERTO, fechados = STATUS=FECHADO",
+        ),
+        (
+            "Aguardando Relatório",
+            format_int_pt_br(int(metrics.get('aguardando_relatorio', 0))),
+            "Status especial",
+            "Funcao: chamados que estão em AGUARDANDO_RELATORIO e não entram em abertos.",
         ),
         (
             "Backlog >30 dias",

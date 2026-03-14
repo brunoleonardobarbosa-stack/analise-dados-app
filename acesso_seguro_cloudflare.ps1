@@ -25,7 +25,7 @@ if (-not (Test-Path $pythonExe)) {
 $cfOut = Join-Path $projectRoot "cf_stdout.log"
 $cfErr = Join-Path $projectRoot "cf_stderr.log"
 
-function Require-Command {
+function Test-CommandExists {
     param([string]$Name)
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "Comando '$Name' nao encontrado no PATH."
