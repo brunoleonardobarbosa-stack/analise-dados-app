@@ -1572,28 +1572,10 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
 
     cards = [
         (
-            "Disponibilidade Global",
-            f"{format_percent_pt_br(max(0.0, 100.0 - percentual_cancelados))}%",
-            "Baseado em cancelamentos",
-            "Funcao: mede a estabilidade operacional usando o percentual de chamados nao cancelados.\nLógica: 100% - percentual_cancelados = 100% - (cancelados/total)*100",
-        ),
-        (
-            "Chamados Criticos em Aberto",
-            format_int_pt_br(int(metrics["alta_criticidade_abertos"])),
-            "Criticidade ALTA ativa",
-            "Funcao: destaca urgencias em aberto para priorizacao imediata.\nLógica: quantidade de chamados com STATUS=ABERTO e CRITICIDADE=ALTA",
-        ),
-        (
-            "Tempo Medio de Atendimento",
-            mttr_text,
-            "Meta operacional: <= 15 dias",
-            "Funcao: acompanha o tempo medio para concluir chamados e controlar eficiencia.\nLógica: média dos dias entre DATA_ABERTURA e DATA_FECHAMENTO para chamados fechados",
-        ),
-        (
-            "Volume de Chamados",
-            f"{format_int_pt_br(int(metrics['abertos']))} / {format_int_pt_br(fechados)}",
-            "Abertos / Fechados",
-            "Funcao: compara carga atual (abertos) com capacidade de resolucao (fechados).\nLógica: abertos = STATUS=ABERTO, fechados = STATUS=FECHADO",
+            "Chamados Abertos",
+            format_int_pt_br(int(metrics['abertos'])),
+            "Situação atual",
+            "Funcao: total de chamados ABERTOS. Lógica: STATUS normalizado = ABERTO",
         ),
         (
             "Aguardando Relatório",
@@ -1602,16 +1584,34 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
             "Funcao: chamados que estão em AGUARDANDO_RELATORIO e não entram em abertos.",
         ),
         (
+            "Chamados Críticos em Aberto",
+            format_int_pt_br(int(metrics['alta_criticidade_abertos'])),
+            "Criticidade ALTA ativa",
+            "Funcao: destaca urgencias em aberto para priorizacao imediata.\nLógica: STATUS=ABERTO e CRITICIDADE=ALTA",
+        ),
+        (
             "Backlog >30 dias",
             format_int_pt_br(backlog_30),
             "Fila com maior risco",
             "Funcao: mostra chamados envelhecidos com maior risco de impacto operacional.\nLógica: quantidade de chamados abertos com Faixa '>30 dias'",
         ),
         (
+            "Tempo Médio de Atendimento (MTTR)",
+            mttr_text,
+            "Meta operacional: <= 15 dias",
+            "Funcao: acompanha o tempo medio para concluir chamados e controlar eficiencia.\nLógica: média dos dias entre DATA_ABERTURA e DATA_FECHAMENTO para chamados fechados",
+        ),
+        (
             "Taxa de Fechamento",
             f"{format_percent_pt_br(taxa_fechamento)}%",
             "Fechados sobre total",
             "Funcao: indica efetividade do time na conversao de chamados em resolucoes.\nLógica: (fechados/total)*100",
+        ),
+        (
+            "Disponibilidade Global",
+            f"{format_percent_pt_br(max(0.0, 100.0 - percentual_cancelados))}%",
+            "Baseado em cancelamentos",
+            "Funcao: mede a estabilidade operacional com percentual de chamados nao cancelados.\nLógica: 100% - percentual_cancelados",
         ),
         (
             "Corretiva em Aberto",
