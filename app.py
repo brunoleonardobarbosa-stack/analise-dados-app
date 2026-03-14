@@ -16,6 +16,11 @@ import plotly.graph_objects as go
 import streamlit as st
 
 try:
+    import openai
+except ImportError:
+    openai = None
+
+try:
     from reportlab.lib import colors as rl_colors
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -314,6 +319,31 @@ def normalize_status(value: str) -> str:
         return "CANCELADO"
 
     return "OUTROS"
+
+
+def generate_assistant_response(question: str) -> str:
+    if openai is None:
+        return "Dependência 'openai' não instalada. Instale com `pip install openai`."
+
+    api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "") if hasattr(st, "secrets") else ""
+    if not api_key:
+        return "OPENAI_API_KEY não configurada. Defina como variável de ambiente ou em st.secrets."
+
+    openai.api_key = api_key
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Você é o assistente inteligente de Engenharia Clínica. Ajude com métricas e análise de chamados."},
+                {"role": "user", "content": question},
+            ],
+            max_tokens=300,
+            temperature=0.3,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as exc:
+        return f"Erro ao chamar API do assistente: {exc}"
 
 
 def normalize_service_group(value: str) -> str:
@@ -3428,6 +3458,18 @@ def main() -> None:
                 st.session_state["data_inicial"] = min_data
             if st.session_state["data_final"] < min_data or st.session_state["data_final"] > max_data:
                 st.session_state["data_final"] = max_data
+
+        # ── Assistente Gemini / Chatbot ──
+        with st.expander(":robot_face: Assistente Gemini", expanded=False):
+            st.markdown("Digite uma pergunta rápida sobre os dados, KPIs ou processamento de chamados.")
+            user_question = st.text_area("Pergunta para o assistente", key="gemini_question", height=100)
+            if st.button("Perguntar ao Assistente", key="gemini_ask"):
+                if not user_question.strip():
+                    st.warning("Escreva uma pergunta antes de enviar.")
+                else:
+                    with st.spinner("Consultando o assistente..."):
+                        answer = generate_assistant_response(user_question)
+                        st.markdown(f"**Resposta:** {answer}")
 
         # ── Secao 1: Quadro de Trabalho ──
         with st.expander(":clipboard: Quadro de Trabalho", expanded=True):
