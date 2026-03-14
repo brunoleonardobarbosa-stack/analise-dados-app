@@ -321,29 +321,43 @@ def normalize_status(value: str) -> str:
     return "OUTROS"
 
 
-def generate_assistant_response(question: str) -> str:
+def generate_gemini_response(question: str) -> str:
+    """Chama a API Gemini/OpenAI para respostas de linguagem natural."""
     if openai is None:
-        return "Dependência 'openai' não instalada. Instale com `pip install openai`."
+        return "Dependência openai não instalada. Rode 'pip install openai' e reinicie o app."
 
-    api_key = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", "") if hasattr(st, "secrets") else ""
+    api_key = (
+        os.getenv("OPENAI_API_KEY")
+        or (st.secrets.get("OPENAI_API_KEY", "") if hasattr(st, "secrets") else "")
+    )
     if not api_key:
         return "OPENAI_API_KEY não configurada. Defina como variável de ambiente ou em st.secrets."
 
-    openai.api_key = api_key
-
     try:
+        openai.api_key = api_key
+        openai.ChatCompletion.request_timeout = 20
         response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
+            model="gpt-4o-mini",  # ou "gemini-1"/"gemini-pro" se disponível
             messages=[
-                {"role": "system", "content": "Você é o assistente inteligente de Engenharia Clínica. Ajude com métricas e análise de chamados."},
+                {"role": "system", "content": "Você é um assistente de análise de chamados de Engenharia Clínica."},
                 {"role": "user", "content": question},
             ],
-            max_tokens=300,
+            max_tokens=350,
             temperature=0.3,
+            n=1,
         )
+        if not response or not getattr(response, 'choices', None):
+            return "A API Gemini não retornou resultado. Verifique a conexão e a quota de uso."
+
         return response.choices[0].message.content.strip()
+
     except Exception as exc:
-        return f"Erro ao chamar API do assistente: {exc}"
+        msg = str(exc)
+        if "Could not connect" in msg or "ConnectionError" in msg:
+            return "Erro de comunicação: falha ao conectar à API Gemini. Verifique sua internet e proxy."
+        if "401" in msg or "authentication" in msg.lower():
+            return "Erro de autenticação Gemini: verifique sua OPENAI_API_KEY."
+        return f"Erro ao chamar Gemini: {msg}"
 
 
 def normalize_service_group(value: str) -> str:
@@ -1636,60 +1650,70 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
 
     cards = [
         (
+            "abertos",
             "Chamados Abertos",
             format_int_pt_br(int(metrics['abertos'])),
             "Situação atual",
             "Função: total de chamados ABERTOS. Lógica: STATUS normalizado = ABERTO",
         ),
         (
+            "aguardando_relatorio",
             "Aguardando Relatório",
             format_int_pt_br(int(metrics.get('aguardando_relatorio', 0))),
             "Status especial",
             "Função: chamados que estão em AGUARDANDO_RELATORIO e não entram em abertos.",
         ),
         (
+            "criticos_aberto",
             "Chamados Críticos em Aberto",
             format_int_pt_br(int(metrics['alta_criticidade_abertos'])),
             "Criticidade ALTA ativa",
             "Função: destaca urgências em aberto para priorização imediata.\nLógica: STATUS=ABERTO e CRITICIDADE=ALTA",
         ),
         (
+            "backlog_30",
             "Backlog >30 dias",
             format_int_pt_br(backlog_30),
             "Fila com maior risco",
             "Função: mostra chamados envelhecidos com maior risco de impacto operacional.\nLógica: quantidade de chamados abertos com Faixa '>30 dias'",
         ),
         (
+            "corretiva",
             "Corretiva em Aberto",
             format_int_pt_br(int(metrics.get("corretiva", 0))),
             "Chamados corretivos abertos",
             "Função: chamados corretivos com status ABERTO no período filtrado.\nLógica: STATUS=ABERTO e TIPO_SERVICO normalizado = CORRETIVA",
         ),
         (
+            "preventiva",
             "Preventiva em Aberto",
             format_int_pt_br(int(metrics.get("preventiva", 0))),
             "Chamados preventivos abertos",
             "Função: chamados preventivos com status ABERTO no período filtrado.\nLógica: STATUS=ABERTO e TIPO_SERVICO normalizado = PREVENTIVA",
         ),
         (
+            "calibracao",
             "Calibração em Aberto",
             format_int_pt_br(int(metrics.get("calibracao", 0))),
             "Chamados de calibração abertos",
             "Função: chamados de calibração (inclui verificação) com status ABERTO no período filtrado.\nLógica: STATUS=ABERTO e TIPO_SERVICO normalizado = CALIBRACAO",
         ),
         (
+            "mttr",
             "Tempo Médio de Atendimento (MTTR)",
             mttr_text,
             "Meta operacional: <= 15 dias",
             "Função: acompanha o tempo médio para concluir chamados e controlar eficiência.\nLógica: média dos dias entre DATA_ABERTURA e DATA_FECHAMENTO para chamados fechados",
         ),
         (
+            "taxa_fechamento",
             "Taxa de Fechamento",
             f"{format_percent_pt_br(taxa_fechamento)}%",
             "Fechados sobre total",
             "Função: indica efetividade do time na conversão de chamados em resoluções.\nLógica: (fechados/total)*100",
         ),
         (
+            "disponibilidade",
             "Disponibilidade Global",
             f"{format_percent_pt_br(max(0.0, 100.0 - percentual_cancelados))}%",
             "Baseado em cancelamentos",
@@ -1698,14 +1722,15 @@ def render_kpi_cards(metrics: dict[str, int | float | str | None], aging_df: pd.
     ]
 
     card_blocks: list[str] = []
-    for title, value, trend, tip in cards:
+    for key, title, value, trend, tip in cards:
         tooltip = escape(tip)
+        href = f"?detalhe={key}"
         card_blocks.append(
-            f"<div class='kpi-grid-card' title='{tooltip}'>"
+            f"<a href='{href}' target='_blank' class='kpi-grid-card' title='{tooltip}'>"
             f"<div class='kpi-grid-title'>{title}<span class='kpi-info-dot' title='{tooltip}'>i</span></div>"
             f"<div class='kpi-grid-value'>{value}</div>"
             f"<div class='kpi-grid-trend'>{trend}</div>"
-            f"</div>"
+            f"</a>"
         )
 
     st.markdown("<div class='kpi-responsive-grid'>" + "".join(card_blocks) + "</div>", unsafe_allow_html=True)
@@ -1860,8 +1885,61 @@ def apply_executive_styles() -> None:
 
         .stApp {
             font-family: "Segoe UI", "Inter", "Calibri", sans-serif;
-            background: var(--ec-bg);
+            background: linear-gradient(135deg, #f2f7fb 0%, #ddeaf3 45%, #c9e1ee 100%);
             margin-top: 0;
+        }
+
+        .hero-fullscreen {
+            width: 100%;
+            min-height: 360px;
+            background-image: url('https://images.unsplash.com/photo-1581091012184-839aaa23afab?auto=format&fit=crop&w=1800&q=80');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            position: relative;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 8px 18px rgba(13, 30, 50, 0.28);
+            margin-bottom: 1rem;
+        }
+
+        .hero-fullscreen::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(10, 139, 141, 0.40), rgba(14, 124, 123, 0.76));
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 980px;
+            padding: 2rem;
+        }
+
+        .hero-title {
+            margin: 0;
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #ffffff;
+            text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .hero-subtitle {
+            margin-top: 0.8rem;
+            color: #f0f9f9;
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            font-weight: 600;
+            line-height: 1.4;
+            text-shadow: 0 6px 18px rgba(0, 0, 0, 0.30);
         }
 
         /* ── Scrollbar personalizada ── */
@@ -3242,7 +3320,13 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-import fitz  # PyMuPDF
+
+try:
+    import fitz  # PyMuPDF
+    HAS_FITZ = True
+except ImportError:
+    HAS_FITZ = False
+    fitz = None
 
 
 def _get_email_config() -> dict | None:
@@ -3366,6 +3450,13 @@ def main() -> None:
 
     st.markdown(
         """
+        <div class='hero-fullscreen'>
+            <div class='hero-content'>
+                <h1 class='hero-title'>Engenharia Clínica DASA</h1>
+                <p class='hero-subtitle'>Uma nova perspectiva para gestão de falhas, MTTR, backlog e qualidade operacional.</p>
+            </div>
+        </div>
+
         <div class='brand-wrap'>
             <div class='brand-card'>
                 <div class='brand-glow'></div>
@@ -3495,14 +3586,14 @@ def main() -> None:
 
         # ── Assistente Gemini / Chatbot ──
         with st.expander(":robot_face: Assistente Gemini", expanded=False):
-            st.markdown("Digite uma pergunta rápida sobre os dados, KPIs ou processamento de chamados.")
+            st.markdown("Digite uma pergunta rápida sobre os dados de chamados e métricas.")
             user_question = st.text_area("Pergunta para o assistente", key="gemini_question", height=100)
             if st.button("Perguntar ao Assistente", key="gemini_ask"):
                 if not user_question.strip():
                     st.warning("Escreva uma pergunta antes de enviar.")
                 else:
-                    with st.spinner("Consultando o assistente..."):
-                        answer = generate_assistant_response(user_question)
+                    with st.spinner("Consultando o assistente Gemini..."):
+                        answer = generate_gemini_response(user_question)
                         st.markdown(f"**Resposta:** {answer}")
 
         # ── Secao 1: Quadro de Trabalho ──
@@ -3795,6 +3886,13 @@ def main() -> None:
     with tab1:
         st.subheader("Painel Executivo Operacional")
 
+        # Caso a URL venha com ?detalhe=<chave>, abre a seção de detalhe em outra aba
+        query_params = st.experimental_get_query_params()
+        detalhe_query = query_params.get("detalhe", [None])[0]
+        if detalhe_query:
+            st.session_state["detalhe_categoria"] = detalhe_query
+            st.session_state["open_analiseProfunda"] = True
+
         metrics = compute_metrics(filtered)
         aging_df = build_aging_dataframe(filtered)
         pareto_df = build_pareto_dataframe(filtered)
@@ -3857,8 +3955,14 @@ def main() -> None:
             else:
                 st.dataframe(detail_df, use_container_width=True)
 
+            if st.session_state.get("open_analiseProfunda"):
+                diag = gerar_diagnostico_inteligente(filtered)
+                st.markdown("### Análise Profunda de Falhas")
+                st.markdown(_ia_responder_pergunta("Quais as falhas mais recorrentes?", diag))
+
             if st.button("Fechar painel de detalhes", key="btn_close_detalles"):
                 st.session_state.pop("detalhe_categoria", None)
+                st.session_state.pop("open_analiseProfunda", None)
 
         st.markdown("<div class='section-divider'></div>", unsafe_allow_html=True)
 
