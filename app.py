@@ -1889,68 +1889,59 @@ def apply_executive_styles() -> None:
             margin-top: 0;
         }
 
-        .hero-fullscreen {
+        .hero-card {
             width: 100%;
-            min-height: 380px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 10px 22px rgba(75, 62, 49, 0.22);
-            margin-bottom: 1rem;
-            position: relative;
-        }
-
-        .hero-left,
-        .hero-right {
-            position: relative;
-        }
-
-        .hero-left {
-            background: radial-gradient(circle at 35% 30%, rgba(232, 215, 190, 0.95) 0%, rgba(241, 226, 206, 0.90) 55%, rgba(215, 198, 175, 1) 100%);
-            color: #3f3424;
+            min-height: 250px;
+            background: linear-gradient(135deg, #0a8b8d 0%, #0b6c74 100%);
+            border-radius: 22px;
+            margin-bottom: 1.25rem;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            align-items: flex-start;
-            padding: 2.2rem;
-            gap: 0.8rem;
+            box-shadow: 0 12px 24px rgba(40, 50, 60, 0.28);
+            position: relative;
+            overflow: hidden;
         }
 
-        .hero-right {
-            background-image: url('https://images.unsplash.com/photo-1581091012184-839aaa23afab?auto=format&fit=crop&w=1800&q=80');
-            background-size: cover;
-            background-position: center;
-            filter: brightness(0.92) contrast(1.02);
-            background-color: rgba(245, 237, 224, 0.4);
-        }
-
-        .hero-left::before {
+        .hero-card::before {
             content: "";
             position: absolute;
-            top: 10%;
-            right: 14%;
-            width: 130px;
-            height: 130px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.50);
-            box-shadow: 0 0 28px rgba(255, 255, 255, 0.35);
-            z-index: 1;
+            inset: 0;
+            background: radial-gradient(circle at 25% 30%, rgba(255, 255, 255, 0.16), transparent 55%);
+            pointer-events: none;
         }
 
-        .hero-subtitle-badge {
+        .hero-card-content {
             position: relative;
-            z-index: 2;
-            text-transform: uppercase;
-            font-size: 0.82rem;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.42);
-            border-radius: 999px;
-            padding: 0.24rem 0.78rem;
-            color: #f8fffd;
+            text-align: center;
+            color: #fff;
+            z-index: 1;
+            padding: 0 1rem;
         }
+
+        .hero-card-letter {
+            font-size: clamp(2.5rem, 6vw, 4.4rem);
+            font-weight: 900;
+            letter-spacing: 0.12rem;
+            margin-bottom: 0.55rem;
+            opacity: 0.95;
+        }
+
+        .hero-card-title {
+            font-size: clamp(2.6rem, 6vw, 4.2rem);
+            font-weight: 900;
+            letter-spacing: 0.16rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .hero-card-subtitle {
+            font-size: clamp(0.95rem, 2vw, 1.2rem);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            color: #f4f7f9;
+        }
+
 
         .hero-title {
             margin: 0;
@@ -3482,15 +3473,13 @@ def main() -> None:
 
     st.markdown(
         """
-        <div class='hero-fullscreen'>
-            <div class='hero-left'>
-                <div class='hero-subtitle-badge'>DASA</div>
-                <h1 class='hero-title'>UMA NOVA PERSPECTIVA</h1>
-                <p class='hero-subtitle'>Engenharia Clínica | Análise de falhas, backlog e MTTR com inteligência.</p>
+        <div class='hero-card'>
+            <div class='hero-card-content'>
+                <div class='hero-card-letter'>D</div>
+                <div class='hero-card-title'>DASA</div>
+                <div class='hero-card-subtitle'>ENGENHARIA CLÍNICA — AC</div>
             </div>
-            <div class='hero-right'></div>
         </div>
-
         """,
         unsafe_allow_html=True,
     )
