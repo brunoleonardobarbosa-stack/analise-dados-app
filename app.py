@@ -1891,55 +1891,126 @@ def apply_executive_styles() -> None:
 
         .hero-fullscreen {
             width: 100%;
-            min-height: 360px;
+            min-height: 380px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 10px 22px rgba(13, 30, 50, 0.30);
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .hero-left,
+        .hero-right {
+            position: relative;
+        }
+
+        .hero-left {
+            background: radial-gradient(circle at 35% 30%, rgba(6, 116, 121, 0.95) 0%, rgba(10, 139, 141, 0.90) 55%, rgba(1, 46, 54, 1) 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2.2rem;
+            gap: 0.8rem;
+        }
+
+        .hero-right {
             background-image: url('https://images.unsplash.com/photo-1581091012184-839aaa23afab?auto=format&fit=crop&w=1800&q=80');
             background-size: cover;
             background-position: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            color: white;
-            position: relative;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 8px 18px rgba(13, 30, 50, 0.28);
-            margin-bottom: 1rem;
+            filter: brightness(0.95);
         }
 
-        .hero-fullscreen::before {
+        .hero-left::before {
             content: "";
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(180deg, rgba(10, 139, 141, 0.40), rgba(14, 124, 123, 0.76));
+            top: 10%;
+            right: 14%;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.18);
+            box-shadow: 0 0 32px rgba(255, 255, 255, 0.25);
+            z-index: 1;
         }
 
-        .hero-content {
+        .hero-subtitle-badge {
             position: relative;
             z-index: 2;
-            max-width: 980px;
-            padding: 2rem;
+            text-transform: uppercase;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.42);
+            border-radius: 999px;
+            padding: 0.24rem 0.78rem;
+            color: #f8fffd;
         }
 
         .hero-title {
             margin: 0;
-            font-size: clamp(2rem, 4vw, 3rem);
+            font-size: clamp(2.1rem, 5vw, 3.8rem);
             font-weight: 900;
             letter-spacing: 1px;
             color: #ffffff;
-            text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            z-index: 2;
+            text-shadow: 0 10px 28px rgba(0, 0, 0, 0.36);
         }
 
         .hero-subtitle {
-            margin-top: 0.8rem;
-            color: #f0f9f9;
-            font-size: clamp(1rem, 2vw, 1.25rem);
+            margin: 0;
+            color: #ecf8f9;
+            font-size: clamp(1.1rem, 2.1vw, 1.3rem);
             font-weight: 600;
             line-height: 1.4;
-            text-shadow: 0 6px 18px rgba(0, 0, 0, 0.30);
+            z-index: 2;
+            text-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+        }
+
+        .brand-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .brand-card {
+            border: 1px solid rgba(9, 98, 103, 0.3);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(230, 245, 245, 0.68));
+            box-shadow: 0 8px 18px rgba(22, 60, 71, 0.16);
+        }
+
+        .brand-logo-dd {
+            position: relative;
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 0.5rem; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .brand-dd {
+            width: 28px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0a8b8d 0%, #0E7C7B 100%);
+            box-shadow: 0 4px 12px rgba(10, 139, 141, 0.6);
+            position: absolute;
+        }
+
+        .brand-dd.left { left: 0; transform: skew(12deg); }
+        .brand-dd.right { right: 0; transform: skew(-12deg); }
+        .brand-dd-text {
+            position: absolute;
+            color: rgba(255,255,255,0.95);
+            font-size: 1.85rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            z-index: 2;
         }
 
         /* ── Scrollbar personalizada ── */
@@ -3451,27 +3522,22 @@ def main() -> None:
     st.markdown(
         """
         <div class='hero-fullscreen'>
-            <div class='hero-content'>
-                <h1 class='hero-title'>Engenharia Clínica DASA</h1>
-                <p class='hero-subtitle'>Uma nova perspectiva para gestão de falhas, MTTR, backlog e qualidade operacional.</p>
+            <div class='hero-left'>
+                <div class='hero-subtitle-badge'>DASA</div>
+                <h1 class='hero-title'>UMA NOVA PERSPECTIVA</h1>
+                <p class='hero-subtitle'>Engenharia Clínica | Análise de falhas, backlog e MTTR com inteligência.</p>
             </div>
+            <div class='hero-right'></div>
         </div>
 
         <div class='brand-wrap'>
             <div class='brand-card'>
                 <div class='brand-glow'></div>
-                <svg class='brand-logo-icon' viewBox='0 0 100 100' fill='none' xmlns='http://www.w3.org/2000/svg'>
-                  <g class='gear-main'>
-                    <path d='M50 18l3.5-7h-7l3.5 7zm0 64l-3.5 7h7L50 82zm-32-32l-7-3.5v7l7-3.5zm64 0l7 3.5v-7l-7 3.5zM24.4 29.4l-6.2-4.6-4.2 4.2 4.6 6.2 5.8-5.8zm51.2 41.2l6.2 4.6 4.2-4.2-4.6-6.2-5.8 5.8zm0-41.2l5.8-5.8-4.2-4.2-6.2 4.6 4.6 5.4zM24.4 70.6l-5.8 5.8 4.2 4.2 6.2-4.6-4.6-5.4z' fill='rgba(255,255,255,0.5)'/>
-                    <circle cx='50' cy='50' r='22' stroke='rgba(255,255,255,0.7)' stroke-width='4' fill='none'/>
-                    <circle cx='50' cy='50' r='12' fill='rgba(255,255,255,0.25)' stroke='rgba(255,255,255,0.6)' stroke-width='2'/>
-                  </g>
-                  <g class='gear-small'>
-                    <path d='M78 62l2-4h-4l2 4zm0 24l-2 4h4l-2-4zm-12-12l-4-2v4l4-2zm24 0l4 2v-4l-4 2zM69 67l-3-2.5-2 2 2.5 3 2.5-2.5zm19.5 15.5l3 2.5 2-2-2.5-3-2.5 2.5zm0-15.5l2.5-2.5-2-2-3 2.5 2.5 2zm-19.5 15.5l-2.5 2.5 2 2 3-2.5-2.5-2z' fill='rgba(255,255,255,0.45)'/>
-                    <circle cx='78' cy='74' r='9' stroke='rgba(255,255,255,0.6)' stroke-width='2.5' fill='none'/>
-                    <circle cx='78' cy='74' r='4.5' fill='rgba(255,255,255,0.2)' stroke='rgba(255,255,255,0.5)' stroke-width='1.5'/>
-                  </g>
-                </svg>
+                <div class='brand-logo-dd'>
+                    <div class='brand-dd left'></div>
+                    <div class='brand-dd right'></div>
+                    <div class='brand-dd-text'>D</div>
+                </div>
                 <p class='brand-title'>DASA</p>
                 <div class='brand-divider'></div>
                 <p class='brand-subtitle'>Engenharia Clínica — AC</p>
