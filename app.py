@@ -3958,7 +3958,7 @@ def main() -> None:
         selected_faixa = st.session_state.get("selected_aging_faixa")
         selected_falha = st.session_state.get("selected_pareto_falha")
 
-        show_click_details = st.toggle(
+        show_click_details = st.checkbox(
             "Mostrar detalhes por clique nos graficos",
             value=False,
             key="show_click_details_toggle",
