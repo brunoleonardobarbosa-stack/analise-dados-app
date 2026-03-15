@@ -1382,38 +1382,49 @@ def main() -> None:
         st.session_state["uploaded_file_name"] = ""
 
     try:
-        with open(IMAGE_PATH, "rb") as f:
-            image_bytes = f.read()
-        st.image(image_bytes, use_container_width=True)
-    except FileNotFoundError:
-        st.error(f"Imagem não encontrada em: {IMAGE_PATH}")
+        from PIL import Image
+        img = Image.open(IMAGE_PATH)
+        w, h = img.size
+        left_img = img.crop((0, 0, w // 2, h))
+        right_img = img.crop((w // 2, 0, w, h))
+    except Exception as exc:
+        left_img = None
+        right_img = None
+        st.error(f"Erro ao carregar a imagem da capa: {exc}")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if left_img:
+            st.image(left_img, use_container_width=True)
+    with col2:
+        if right_img:
+            st.image(right_img, use_container_width=True)
 
     if st.session_state["uploaded_file_bytes"] is None:
-        st.markdown(
-            """
-            <div class='upload-panel'>
-                <svg width='48' height='48' viewBox='0 0 24 24' fill='none' style='margin-bottom:8px;opacity:0.7;'>
-                  <path d='M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4' stroke='#0A8B8D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>
-                  <path d='M17 8l-5-5-5 5' stroke='#0A8B8D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>
-                  <path d='M12 3v12' stroke='#14A3A5' stroke-width='1.5' stroke-linecap='round'/>
-                </svg>
-                <h3>Enviar Planilha</h3>
-                <p>Arraste ou selecione seu arquivo .xlsx / .xls para iniciar a análise</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        uploaded_file = st.file_uploader("Enviar planilha (.xlsx ou .xls)", type=["xlsx", "xls"], key="main_file_uploader")
+        with col2:
+            st.markdown(
+                """
+                <div class='upload-panel' style='margin-top: -10px; border: 1px dashed #d4e0e0; border-radius: 8px; padding: 12px; text-align: center; background: #ffffff;'>
+                    <svg width='32' height='32' viewBox='0 0 24 24' fill='none' style='margin-bottom:4px;opacity:0.6;'>
+                      <path d='M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4' stroke='#0A8B8D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>
+                      <path d='M17 8l-5-5-5 5' stroke='#0A8B8D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>
+                      <path d='M12 3v12' stroke='#14A3A5' stroke-width='1.5' stroke-linecap='round'/>
+                    </svg>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            # The label_visibility is collapsed because streamlit provides "Drag and drop file here" inherently
+            uploaded_file = st.file_uploader("", type=["xlsx", "xls"], key="main_file_uploader", label_visibility="collapsed")
 
-        if uploaded_file is not None:
-            uploaded_bytes = uploaded_file.getvalue()
-            if not uploaded_bytes:
-                st.error("Arquivo vazio ou invalido.")
-                return
-            st.session_state["uploaded_file_bytes"] = uploaded_bytes
-            st.session_state["uploaded_file_name"] = uploaded_file.name
-            st.rerun()
-        st.info("Envie um arquivo .xlsx ou .xls para iniciar a analise.")
+            if uploaded_file is not None:
+                uploaded_bytes = uploaded_file.getvalue()
+                if not uploaded_bytes:
+                    st.error("Arquivo vazio ou invalido.")
+                    return
+                st.session_state["uploaded_file_bytes"] = uploaded_bytes
+                st.session_state["uploaded_file_name"] = uploaded_file.name
+                st.rerun()
         return
 
     try:
