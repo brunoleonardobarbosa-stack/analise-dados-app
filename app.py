@@ -3929,42 +3929,7 @@ def main() -> None:
 
         render_kpi_cards(metrics, aging_df)
 
-        # Botões para detalhar equipamentos por categoria de KPI
-        detail_options = [
-            ("Chamados Abertos", "abertos"),
-            ("Aguardando Relatório", "aguardando_relatorio"),
-            ("Chamados Críticos em Aberto", "criticos_aberto"),
-            ("Backlog >30 dias", "backlog_30"),
-            ("Corretiva em Aberto", "corretiva"),
-            ("Preventiva em Aberto", "preventiva"),
-            ("Calibração em Aberto", "calibracao"),
-        ]
-
-        cols = st.columns(4)
-        for i, (label, key) in enumerate(detail_options):
-            with cols[i % 4]:
-                if st.button(f"Detalhar: {label}", key=f"btn_{key}"):
-                    st.session_state["detalhe_categoria"] = key
-
-        detalhe_categoria = st.session_state.get("detalhe_categoria")
-
-        if detalhe_categoria:
-            label = next((l for l, k in detail_options if k == detalhe_categoria), detalhe_categoria)
-            st.markdown(f"### Detalhes de {label}")
-            detail_df = get_detail_dataframe(filtered, detalhe_categoria)
-            if detail_df.empty:
-                st.info("Nenhum registro encontrado para essa categoria de detalhamento.")
-            else:
-                st.dataframe(detail_df, use_container_width=True)
-
-            if st.session_state.get("open_analiseProfunda"):
-                diag = gerar_diagnostico_inteligente(filtered)
-                st.markdown("### Análise Profunda de Falhas")
-                st.markdown(_ia_responder_pergunta("Quais as falhas mais recorrentes?", diag))
-
-            if st.button("Fechar painel de detalhes", key="btn_close_detalles"):
-                st.session_state.pop("detalhe_categoria", None)
-                st.session_state.pop("open_analiseProfunda", None)
+        # Detalhamento de equipamentos removido conforme solicitação
 
         st.markdown("<div class='section-divider'></div>", unsafe_allow_html=True)
 
