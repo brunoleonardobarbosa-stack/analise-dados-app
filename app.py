@@ -3890,8 +3890,7 @@ def main() -> None:
         st.subheader("Painel Executivo Operacional")
 
         # Caso a URL venha com ?detalhe=<chave>, abre a seção de detalhe em outra aba
-        query_params = st.experimental_get_query_params()
-        detalhe_query = query_params.get("detalhe", [None])[0]
+        detalhe_query = st.query_params.get("detalhe")
         if detalhe_query:
             st.session_state["detalhe_categoria"] = detalhe_query
             st.session_state["open_analiseProfunda"] = True
