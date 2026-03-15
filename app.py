@@ -1381,7 +1381,12 @@ def main() -> None:
     if "uploaded_file_name" not in st.session_state:
         st.session_state["uploaded_file_name"] = ""
 
-    st.image(IMAGE_PATH, use_container_width=True)
+    try:
+        with open(IMAGE_PATH, "rb") as f:
+            image_bytes = f.read()
+        st.image(image_bytes, use_container_width=True)
+    except FileNotFoundError:
+        st.error(f"Imagem não encontrada em: {IMAGE_PATH}")
 
     if st.session_state["uploaded_file_bytes"] is None:
         st.markdown(
