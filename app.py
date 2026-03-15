@@ -1385,7 +1385,6 @@ def main() -> None:
         """
         <div class='hero-card'>
             <div class='hero-card-content'>
-                <div class='hero-card-letter'>D</div>
                 <div class='hero-card-title'>DASA</div>
                 <div class='hero-card-subtitle'>ENGENHARIA CLÍNICA — AC</div>
             </div>
