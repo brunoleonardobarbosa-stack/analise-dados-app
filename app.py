@@ -1392,7 +1392,7 @@ def main() -> None:
         right_img = None
         st.error(f"Erro ao carregar a imagem da capa: {exc}")
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([1, 1], gap="small")
     with col1:
         if left_img:
             st.image(left_img, use_container_width=True)
@@ -1404,7 +1404,7 @@ def main() -> None:
         with col2:
             st.markdown(
                 """
-                <div class='upload-panel' style='margin-top: -10px; border: 1px dashed #d4e0e0; border-radius: 8px; padding: 12px; text-align: center; background: #ffffff;'>
+                <div class='upload-panel' style='margin-top: -15px; border: 1px dashed #d4e0e0; border-radius: 8px; padding: 12px; text-align: center; background: #ffffff;'>
                     <svg width='32' height='32' viewBox='0 0 24 24' fill='none' style='margin-bottom:4px;opacity:0.6;'>
                       <path d='M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4' stroke='#0A8B8D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>
                       <path d='M17 8l-5-5-5 5' stroke='#0A8B8D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>
