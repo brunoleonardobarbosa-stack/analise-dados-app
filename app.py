@@ -10,6 +10,9 @@ import unicodedata
 from typing import Iterable
 from xml.sax.saxutils import escape
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IMAGE_PATH = os.path.join(BASE_DIR, "assets", "capa.png")
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -1378,7 +1381,7 @@ def main() -> None:
     if "uploaded_file_name" not in st.session_state:
         st.session_state["uploaded_file_name"] = ""
 
-    st.image("assets/capa.png", use_container_width=True)
+    st.image(IMAGE_PATH, use_container_width=True)
 
     if st.session_state["uploaded_file_bytes"] is None:
         st.markdown(
