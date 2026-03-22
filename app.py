@@ -1454,6 +1454,7 @@ def main() -> None:
         # ── Opcoes disponiveis ──
         regiao_options = ["TODAS"] + sorted([x for x in df["REGIAO"].dropna().unique().tolist() if x])
         quadro_options = sorted([x for x in df["QUADRO"].dropna().unique().tolist() if x])
+        solicitante_options = sorted([x for x in df["SOLICITANTE"].dropna().unique().tolist() if x]) if "SOLICITANTE" in df.columns else []
         tag_options = sorted([x for x in df["TAG"].dropna().astype("string").tolist() if str(x).strip()])
         criticidade_options = ["TODAS"] + sorted([x for x in df["CRITICIDADE"].dropna().unique().tolist() if x])
         tipo_servico_options = ["TODOS", "CORRETIVA", "PREVENTIVA", "CALIBRACAO"]
@@ -1470,6 +1471,8 @@ def main() -> None:
             st.session_state["regiao_filter"] = "TODAS"
         if "quadro_filter" not in st.session_state:
             st.session_state["quadro_filter"] = []
+        if "solicitante_filter" not in st.session_state:
+            st.session_state["solicitante_filter"] = []
         if "criticidade_filter" not in st.session_state:
             st.session_state["criticidade_filter"] = "TODAS"
         if st.session_state["criticidade_filter"] not in criticidade_options:
@@ -1482,7 +1485,10 @@ def main() -> None:
             st.session_state["tag_search_suggestion"] = ""
         if not isinstance(st.session_state["quadro_filter"], list):
             st.session_state["quadro_filter"] = []
+        if not isinstance(st.session_state["solicitante_filter"], list):
+            st.session_state["solicitante_filter"] = []
         st.session_state["quadro_filter"] = [q for q in st.session_state["quadro_filter"] if q in quadro_options]
+        st.session_state["solicitante_filter"] = [s for s in st.session_state["solicitante_filter"] if s in solicitante_options]
         if st.session_state["tipo_servico_filter"] not in tipo_servico_options:
             st.session_state["tipo_servico_filter"] = "TODOS"
 
@@ -1508,66 +1514,66 @@ def main() -> None:
                         answer = generate_gemini_response(user_question)
                         st.markdown(f"**Resposta:** {answer}")
 
-        # ── Secao 1: Quadro de Trabalho ──
-        with st.expander(":clipboard: Quadro de Trabalho", expanded=True):
-            quadro_search = st.text_input(
-                "Buscar quadro",
-                key="quadro_search",
+        # ── Secao 1: Solicitantes ──
+        with st.expander(":busts_in_silhouette: Solicitantes", expanded=True):
+            solicitante_search = st.text_input(
+                "Buscar solicitante",
+                key="solicitante_search",
                 placeholder="Digite para filtrar...",
                 label_visibility="collapsed",
             )
-            quadro_search_norm = normalize_scalar_text(quadro_search) if quadro_search else ""
-            quadro_visible = [q for q in quadro_options if quadro_search_norm in normalize_scalar_text(q)] if quadro_search_norm else quadro_options
+            solicitante_search_norm = normalize_scalar_text(solicitante_search) if solicitante_search else ""
+            solicitante_visible = [s for s in solicitante_options if solicitante_search_norm in normalize_scalar_text(s)] if solicitante_search_norm else solicitante_options
 
             # Quando ha busca ativa, marca apenas os visiveis e desmarca o resto
-            if quadro_search_norm:
-                prev_search = st.session_state.get("_prev_quadro_search", "")
-                if quadro_search_norm != prev_search:
-                    for q in quadro_options:
-                        st.session_state[f"chk_quadro_{q}"] = q in quadro_visible
-                    st.session_state["_prev_quadro_search"] = quadro_search_norm
+            if solicitante_search_norm:
+                prev_search = st.session_state.get("_prev_solicitante_search", "")
+                if solicitante_search_norm != prev_search:
+                    for s in solicitante_options:
+                        st.session_state[f"chk_solicitante_{s}"] = s in solicitante_visible
+                    st.session_state["_prev_solicitante_search"] = solicitante_search_norm
                     st.rerun()
             else:
-                if st.session_state.get("_prev_quadro_search", ""):
-                    st.session_state["_prev_quadro_search"] = ""
+                if st.session_state.get("_prev_solicitante_search", ""):
+                    st.session_state["_prev_solicitante_search"] = ""
 
             bcol1, bcol2 = st.columns(2)
-            if bcol1.button("Todos", key="btn_quadro_all", use_container_width=True):
-                for q in quadro_visible:
-                    st.session_state[f"chk_quadro_{q}"] = True
+            if bcol1.button("Todos", key="btn_solicitante_all", use_container_width=True):
+                for s in solicitante_visible:
+                    st.session_state[f"chk_solicitante_{s}"] = True
                 st.rerun()
-            if bcol2.button("Nenhum", key="btn_quadro_clear", use_container_width=True):
-                for q in quadro_visible:
-                    st.session_state[f"chk_quadro_{q}"] = False
+            if bcol2.button("Nenhum", key="btn_solicitante_clear", use_container_width=True):
+                for s in solicitante_visible:
+                    st.session_state[f"chk_solicitante_{s}"] = False
                 st.rerun()
 
             # Container com scroll para a lista de checkboxes
             chk_container = st.container(height=300)
 
-            selected_quadros = []
+            selected_solicitantes = []
             with chk_container:
-                for q in quadro_visible:
-                    key = f"chk_quadro_{q}"
+                for s in solicitante_visible:
+                    key = f"chk_solicitante_{s}"
                     if key not in st.session_state:
-                        st.session_state[key] = not quadro_search_norm
-                    if st.checkbox(q, key=key):
-                        selected_quadros.append(q)
-            # Quadros fora da busca: so incluir se marcados E sem busca ativa
-            for q in quadro_options:
-                if q not in quadro_visible:
-                    key = f"chk_quadro_{q}"
-                    if not quadro_search_norm and st.session_state.get(key, True):
-                        selected_quadros.append(q)
+                        st.session_state[key] = not solicitante_search_norm
+                    if st.checkbox(s, key=key):
+                        selected_solicitantes.append(s)
+            # Solicitantes fora da busca: so incluir se marcados E sem busca ativa
+            for s in solicitante_options:
+                if s not in solicitante_visible:
+                    key = f"chk_solicitante_{s}"
+                    if not solicitante_search_norm and st.session_state.get(key, True):
+                        selected_solicitantes.append(s)
 
-            qtd_sel = len(selected_quadros)
-            if qtd_sel == 0 or qtd_sel == len(quadro_options):
-                st.caption(f":white_check_mark: Todos os quadros ({len(quadro_options)})")
+            qtd_sel = len(selected_solicitantes)
+            if qtd_sel == 0 or qtd_sel == len(solicitante_options):
+                st.caption(f":white_check_mark: Todos os solicitantes ({len(solicitante_options)})")
             else:
-                st.caption(f":dart: {qtd_sel} de {len(quadro_options)} quadro(s)")
-            if quadro_search_norm:
-                st.caption(f":mag: Filtrando: apenas {len(quadro_visible)} quadro(s) correspondente(s)")
+                st.caption(f":dart: {qtd_sel} de {len(solicitante_options)} solicitante(s)")
+            if solicitante_search_norm:
+                st.caption(f":mag: Filtrando: apenas {len(solicitante_visible)} solicitante(s) correspondente(s)")
 
-            st.session_state["quadro_filter"] = selected_quadros if qtd_sel < len(quadro_options) else []
+            st.session_state["solicitante_filter"] = selected_solicitantes if qtd_sel < len(solicitante_options) else []
 
         # ── Secao 2: Tipo de Servico ──
         with st.expander(":wrench: Tipo de Servico", expanded=False):
@@ -1645,14 +1651,15 @@ def main() -> None:
 
         # ── Botao Limpar Tudo ──
         if st.button(":wastebasket: Limpar todos os filtros", use_container_width=True, type="secondary"):
+            st.session_state["solicitante_filter"] = []
             st.session_state["quadro_filter"] = []
             st.session_state["tipo_servico_filter"] = "TODOS"
             st.session_state["tag_search_filter"] = ""
             st.session_state["tag_search_suggestion"] = ""
-            st.session_state["quadro_search"] = ""
-            st.session_state["_prev_quadro_search"] = ""
-            for q in quadro_options:
-                st.session_state[f"chk_quadro_{q}"] = True
+            st.session_state["solicitante_search"] = ""
+            st.session_state["_prev_solicitante_search"] = ""
+            for s in solicitante_options:
+                st.session_state[f"chk_solicitante_{s}"] = True
             if min_data and max_data:
                 st.session_state["data_inicial"] = min_data
                 st.session_state["data_final"] = max_data
@@ -1660,6 +1667,9 @@ def main() -> None:
 
         if not has_tipo_servico:
             st.session_state["tipo_servico_filter"] = "TODOS"
+
+        solicitante_filter_selected = st.session_state.get("solicitante_filter", [])
+        solicitante_filter = solicitante_options.copy() if not solicitante_filter_selected else solicitante_filter_selected
 
         quadro_filter_selected = st.session_state.get("quadro_filter", [])
         quadro_filter = quadro_options.copy() if not quadro_filter_selected else quadro_filter_selected
@@ -1673,6 +1683,7 @@ def main() -> None:
         df,
         "TODAS",
         quadro_filter,
+        solicitante_filter,
         "TODAS",
         tipo_servico_filter,
         data_inicial,
@@ -1682,6 +1693,7 @@ def main() -> None:
 
     # Evita manter selecoes antigas de grafico quando filtros mudam.
     filter_state = (
+        tuple(sorted(solicitante_filter)),
         tuple(sorted(quadro_filter)),
         tipo_servico_filter,
         data_inicial,
@@ -1691,11 +1703,12 @@ def main() -> None:
 
     # Indicador global de filtros aplicados
     filtros_ativos_count = sum([
+        bool(solicitante_filter and len(solicitante_filter) < len(solicitante_options)),
         bool(quadro_filter and len(quadro_filter) < len(quadro_options)),
-        tipo_servico_filter != "TODOS",
-        tag_search_filter.strip() != "",
-        data_inicial != min_data if data_inicial and min_data else False,
-        data_final != max_data if data_final and max_data else False,
+        bool(tipo_servico_filter != "TODOS"),
+        bool(tag_search_filter.strip() != ""),
+        bool(data_inicial != min_data if data_inicial and min_data else False),
+        bool(data_final != max_data if data_final and max_data else False),
     ])
     filter_id = build_filter_id(filter_state)
     if st.session_state.get("last_filter_state") != filter_state:
@@ -1763,6 +1776,13 @@ def main() -> None:
         except Exception:
             return str(value)
 
+    if not solicitante_filter or len(solicitante_filter) == len(solicitante_options):
+        solicitante_resumo = f"TODOS ({len(solicitante_options)})"
+    elif len(solicitante_filter) <= 2:
+        solicitante_resumo = ", ".join(solicitante_filter)
+    else:
+        solicitante_resumo = ", ".join(solicitante_filter[:2]) + f" +{len(solicitante_filter) - 2}"
+
     if not quadro_filter or len(quadro_filter) == len(quadro_options):
         quadro_resumo = f"TODOS ({len(quadro_options)})"
     elif len(quadro_filter) <= 2:
@@ -1774,11 +1794,12 @@ def main() -> None:
     periodo_resumo = f"{fmt_date_display(data_inicial)} a {fmt_date_display(data_final)}"
 
     filtros_texto_display_l1 = (
-        f"Quadro={quadro_resumo} | Servico={tipo_servico_filter}"
+        f"Solicitante={solicitante_resumo} | Servico={tipo_servico_filter}"
     )
     filtros_texto_display_l2 = f"Periodo={periodo_resumo} | Pesquisa={pesquisa_resumo}"
 
     filtros_texto_pdf = (
+        f"Solicitante={', '.join(solicitante_filter) if solicitante_filter else 'TODOS'} | "
         f"Quadro={', '.join(quadro_filter) if quadro_filter else 'TODOS'} | "
         f"Servico={tipo_servico_filter} | "
         f"Periodo={periodo_resumo} | Pesquisa={tag_search_filter if tag_search_filter else '-'} | "

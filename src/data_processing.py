@@ -271,6 +271,7 @@ def apply_filters(
     df: pd.DataFrame,
     regiao: str,
     quadros: list[str],
+    solicitantes: list[str],
     criticidade: str,
     tipo_servico: str,
     data_inicial,
@@ -284,6 +285,9 @@ def apply_filters(
 
     if quadros:
         filtered = filtered[filtered["QUADRO"].isin(quadros)]
+
+    if solicitantes:
+        filtered = filtered[filtered["SOLICITANTE"].isin(solicitantes)]
 
     if criticidade != "TODAS":
         filtered = filtered[filtered["CRITICIDADE"] == criticidade]
