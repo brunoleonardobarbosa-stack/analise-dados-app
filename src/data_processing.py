@@ -286,7 +286,7 @@ def apply_filters(
     if quadros:
         filtered = filtered[filtered["QUADRO"].isin(quadros)]
 
-    if solicitantes:
+    if solicitantes and "SOLICITANTE" in filtered.columns:
         filtered = filtered[filtered["SOLICITANTE"].isin(solicitantes)]
 
     if criticidade != "TODAS":
