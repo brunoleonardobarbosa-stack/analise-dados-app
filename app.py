@@ -1575,7 +1575,68 @@ def main() -> None:
 
             st.session_state["solicitante_filter"] = selected_solicitantes if qtd_sel < len(solicitante_options) else []
 
-        # ── Secao 2: Tipo de Servico ──
+        # ── Secao 2: Quadro de Trabalho ──
+        with st.expander(":clipboard: Quadro de Trabalho", expanded=False):
+            quadro_search = st.text_input(
+                "Buscar quadro",
+                key="quadro_search",
+                placeholder="Digite para filtrar...",
+                label_visibility="collapsed",
+            )
+            quadro_search_norm = normalize_scalar_text(quadro_search) if quadro_search else ""
+            quadro_visible = [q for q in quadro_options if quadro_search_norm in normalize_scalar_text(q)] if quadro_search_norm else quadro_options
+
+            # Quando ha busca ativa, marca apenas os visiveis e desmarca o resto
+            if quadro_search_norm:
+                prev_search = st.session_state.get("_prev_quadro_search", "")
+                if quadro_search_norm != prev_search:
+                    for q in quadro_options:
+                        st.session_state[f"chk_quadro_{q}"] = q in quadro_visible
+                    st.session_state["_prev_quadro_search"] = quadro_search_norm
+                    st.rerun()
+            else:
+                if st.session_state.get("_prev_quadro_search", ""):
+                    st.session_state["_prev_quadro_search"] = ""
+
+            bcol1, bcol2 = st.columns(2)
+            if bcol1.button("Todos", key="btn_quadro_all", use_container_width=True):
+                for q in quadro_visible:
+                    st.session_state[f"chk_quadro_{q}"] = True
+                st.rerun()
+            if bcol2.button("Nenhum", key="btn_quadro_clear", use_container_width=True):
+                for q in quadro_visible:
+                    st.session_state[f"chk_quadro_{q}"] = False
+                st.rerun()
+
+            # Container com scroll para a lista de checkboxes
+            chk_container = st.container(height=300)
+
+            selected_quadros = []
+            with chk_container:
+                for q in quadro_visible:
+                    key = f"chk_quadro_{q}"
+                    if key not in st.session_state:
+                        st.session_state[key] = not quadro_search_norm
+                    if st.checkbox(q, key=key):
+                        selected_quadros.append(q)
+            # Quadros fora da busca: so incluir se marcados E sem busca ativa
+            for q in quadro_options:
+                if q not in quadro_visible:
+                    key = f"chk_quadro_{q}"
+                    if not quadro_search_norm and st.session_state.get(key, True):
+                        selected_quadros.append(q)
+
+            qtd_sel_q = len(selected_quadros)
+            if qtd_sel_q == 0 or qtd_sel_q == len(quadro_options):
+                st.caption(f":white_check_mark: Todos os quadros ({len(quadro_options)})")
+            else:
+                st.caption(f":dart: {qtd_sel_q} de {len(quadro_options)} quadro(s)")
+            if quadro_search_norm:
+                st.caption(f":mag: Filtrando: apenas {len(quadro_visible)} quadro(s) correspondente(s)")
+
+            st.session_state["quadro_filter"] = selected_quadros if qtd_sel_q < len(quadro_options) else []
+
+        # ── Secao 3: Tipo de Servico ──
         with st.expander(":wrench: Tipo de Servico", expanded=False):
             st.radio(
                 "Tipo de servico",
@@ -1658,8 +1719,12 @@ def main() -> None:
             st.session_state["tag_search_suggestion"] = ""
             st.session_state["solicitante_search"] = ""
             st.session_state["_prev_solicitante_search"] = ""
+            st.session_state["quadro_search"] = ""
+            st.session_state["_prev_quadro_search"] = ""
             for s in solicitante_options:
                 st.session_state[f"chk_solicitante_{s}"] = True
+            for q in quadro_options:
+                st.session_state[f"chk_quadro_{q}"] = True
             if min_data and max_data:
                 st.session_state["data_inicial"] = min_data
                 st.session_state["data_final"] = max_data
