@@ -4,9 +4,9 @@ import streamlit as st
 from functools import lru_cache
 
 try:
-    import openai
+    from openai import OpenAI
 except ImportError:
-    openai = None
+    OpenAI = None
 
 from .data_processing import normalize_status
 
@@ -32,10 +32,6 @@ _IA_PERGUNTAS = [
         "chave": "equipamentos",
     },
     {
-        "padroes": ["quadro", "equipe", "time", "sobrecarga", "carga", "distribuicao"],
-        "chave": "quadros",
-    },
-    {
         "padroes": ["mttr", "tempo", "resolucao", "resolução", "sla", "media", "média", "atendimento", "demora"],
         "chave": "mttr",
     },
@@ -57,7 +53,7 @@ _IA_PERGUNTAS = [
 @st.cache_data(show_spinner=False, ttl=300)
 def generate_gemini_response(question: str) -> str:
     """Chama a API Gemini/OpenAI para respostas de linguagem natural."""
-    if openai is None:
+    if OpenAI is None:
         return "Dependência openai não instalada. Rode 'pip install openai' e reinicie o app."
 
     api_key = (
@@ -68,9 +64,8 @@ def generate_gemini_response(question: str) -> str:
         return "OPENAI_API_KEY não configurada. Defina como variável de ambiente ou em st.secrets."
 
     try:
-        openai.api_key = api_key
-        openai.ChatCompletion.request_timeout = 20
-        response = openai.ChatCompletion.create(
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "Você é um assistente de análise de chamados de Engenharia Clínica."},
@@ -78,9 +73,9 @@ def generate_gemini_response(question: str) -> str:
             ],
             max_tokens=350,
             temperature=0.3,
-            n=1,
+            timeout=20,
         )
-        if not response or not getattr(response, 'choices', None):
+        if not response or not response.choices:
             return "A API Gemini não retornou resultado. Verifique a conexão e a quota de uso."
 
         return response.choices[0].message.content.strip()
@@ -110,7 +105,18 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
 
     if chave_detectada == "resumo" or not chave_detectada:
         resp = f"**Resumo da Situacao Atual:**\n\n{diag['resumo_executivo']}\n\n"
-        resp += f"**Nota operacional: {diag['nota']:.0f}/100 ({diag['nota_label']})**"
+        resp += f"**Nota operacional: {diag['nota']:.0f}/100 ({diag['nota_label']})**\n\n"
+        
+        if diag["equip_problematicos"]:
+            resp += "**🚨 Equipamentos em Alerta:**\n"
+            for eq in diag["equip_problematicos"][:3]:
+                resp += f"- {eq['modelo']} ({eq['chamados']} chamados)\n"
+        
+        if diag["quadros_ranking"]:
+            resp += "\n**📊 Performance por Quadro:**\n"
+            for q in diag["quadros_ranking"][:3]:
+                resp += f"- {q['quadro']}: {q['taxa']}% resolucao\n"
+        
         return resp
 
     if chave_detectada == "backlog":
@@ -163,20 +169,6 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
                 resp += f"\n⚠️ **{top['modelo']}** e o mais critico. Considerar contrato de manutencao ou substituicao."
         else:
             resp += "Nenhum equipamento com chamados abertos no momento."
-        return resp
-
-    if chave_detectada == "quadros":
-        resp = f"**Carga por Quadro de Trabalho:**\n\n"
-        if diag["quadros_ranking"]:
-            for i, q in enumerate(diag["quadros_ranking"], 1):
-                resp += f"{i}. **{q['quadro']}** — {q['abertos']} abertos, media {q['media_dias']} dias"
-                if q["alta_crit"] > 0:
-                    resp += f", {q['alta_crit']} criticos"
-                resp += "\n"
-            top_q = diag["quadros_ranking"][0]
-            resp += f"\n📊 **{top_q['quadro']}** esta com maior carga. Avaliar redistribuicao se necessario."
-        else:
-            resp += "Nenhum quadro com chamados abertos."
         return resp
 
     if chave_detectada == "mttr":
@@ -280,7 +272,7 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
         "mttr": mttr,
         "alta_abertos": df[abertos_mask & (df["CRITICIDADE"] == "ALTA")].shape[0],
         "taxa_cancelamento": (df[cancelados_mask].shape[0] / total * 100) if total > 0 else 0,
-        "media_aging": abertos["dias_parado"].mean() if not abertos.empty else 0,
+        "media_aging": float(pd.Series(abertos["dias_parado"].mean()).fillna(0).iloc[0]) if not abertos.empty else 0.0,
         "backlog_30": (abertos["dias_parado"] > 30).sum() if not abertos.empty else 0,
         "backlog_60": (abertos["dias_parado"] > 60).sum() if not abertos.empty else 0,
     }
@@ -328,13 +320,13 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
     nota_final = nota_backlog + nota_mttr + nota_fechamento + nota_critico + nota_canc
     
     if nota_final >= 80:
-        label = "Excelente"
+        label, cor = "Excelente", "#10b981"
     elif nota_final >= 65:
-        label = "Bom"
+        label, cor = "Bom", "#3b82f6"
     elif nota_final >= 50:
-        label = "Regular"
+        label, cor = "Regular", "#f59e0b"
     else:
-        label = "Critico"
+        label, cor = "Critico", "#ef4444"
 
     alertas = []
     if metricas["backlog_60"] > 0:
@@ -366,6 +358,41 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
     if not recomendacoes:
         recomendacoes.append(("Baixa", "Manter ritmo de atendimento e realizar avaliacoes preventivas rotineiras."))
 
+    equip_problematicos = []
+    if not abertos.empty:
+        # Agrupar por Modelo + Fabricante para identificar gargalos
+        gp_equip = abertos.groupby(["MODELO", "FABRICANTE"], as_index=False).agg(
+            chamados=("TAG", "count"),
+            media_dias=("dias_parado", "mean"),
+            alta_crit=("CRITICIDADE", lambda x: (x == "ALTA").sum())
+        ).sort_values("chamados", ascending=False).head(5)
+        
+        for _, row in gp_equip.iterrows():
+            equip_problematicos.append({
+                "modelo": str(row["MODELO"]),
+                "fabricante": str(row["FABRICANTE"]),
+                "chamados": int(row["chamados"]),
+                "media_dias": float(round(row["media_dias"], 1)),
+                "alta_crit": int(row["alta_crit"])
+            })
+
+    quadros_ranking = []
+    if not df.empty and "QUADRO" in df.columns:
+        # Ranking de Quadros (Performance de fechamento vs total)
+        qp = df.groupby("QUADRO", as_index=False).agg(
+            total=("STATUS", "count"),
+            fechados=("STATUS", lambda s: s.map(normalize_status).eq("FECHADO").sum())
+        )
+        qp["taxa"] = (qp["fechados"] / qp["total"] * 100).round(1)
+        qp = qp.sort_values("total", ascending=False).head(5)
+        
+        for _, row in qp.iterrows():
+            quadros_ranking.append({
+                "quadro": str(row["QUADRO"]),
+                "total": int(row["total"]),
+                "taxa": float(row["taxa"])
+            })
+
     resumo = (
         f"Foram analisados {total} registros. No momento, ha {metricas['abertos']} chamados em aberto "
         f"e {metricas['fechados']} ja resolvidos (taxa de resolucao de {taxa_fechamento:.1f}%). "
@@ -380,18 +407,19 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
         if metricas["alta_abertos"] > 0:
             resumo += f"Adicionalmente, ha {metricas['alta_abertos']} chamados marcados como alta criticidade que exigem atencao imediata."
         else:
-            resumo += "Uma boa noticia e que nan ha pendencias de alta criticidade neste filtro."
+            resumo += "Uma boa noticia e que nao ha pendencias de alta criticidade neste filtro."
     else:
         resumo += "A situacao esta totalmente sob controle (fila zerada neste filtro)."
 
     return {
         "nota": nota_final,
         "nota_label": label,
+        "nota_cor": cor,
         "metricas": metricas,
         "alertas": alertas,
         "top_falhas": top_falhas,
         "recomendacoes": recomendacoes,
         "resumo_executivo": resumo,
-        "equip_problematicos": [],
-        "quadros_ranking": []
+        "equip_problematicos": equip_problematicos,
+        "quadros_ranking": quadros_ranking
     }

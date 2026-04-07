@@ -750,7 +750,6 @@ def render_open_call_cards(df_open: pd.DataFrame, max_cards: int, show_caption: 
                 f"<div class='ec-detail-item'><strong>Equipamento:</strong> {escape(str(row['Tipo de Equipamento']))}</div>"
                 f"<div class='ec-detail-item'><strong>Chamado:</strong> {escape(str(row['Numero do Chamado']))}</div>"
                 f"<div class='ec-detail-item'><strong>Dias Parado:</strong> {escape(str(row['Dias Parado']))}</div>"
-                f"<div class='ec-detail-item'><strong>Quadro:</strong> {escape(str(row['Quadro de Trabalho']))}</div>"
                 f"<div class='ec-detail-item'><strong>TAG:</strong> {escape(str(row['TAG']))}</div>"
                 f"<div class='ec-detail-item'><strong>Fabricante:</strong> {escape(str(row['Fabricante']))}</div>"
                 "</div>"
@@ -764,20 +763,6 @@ def render_open_call_cards(df_open: pd.DataFrame, max_cards: int, show_caption: 
             ),
             unsafe_allow_html=True,
         )
-
-
-def render_open_call_cards_by_quadro(df_open: pd.DataFrame, max_cards_per_quadro: int) -> None:
-    if df_open.empty:
-        st.info("Nao ha chamados abertos para os filtros selecionados.")
-        return
-
-    st.caption("Cartoes organizados por Quadro de Trabalho.")
-    grouped = df_open.groupby("Quadro de Trabalho", dropna=False, sort=True)
-    for quadro, g in grouped:
-        quadro_nome = str(quadro) if pd.notna(quadro) else "-"
-        st.markdown(f"#### Quadro: {quadro_nome} ({len(g)} chamados)")
-        limit = min(max_cards_per_quadro, len(g))
-        render_open_call_cards(g, max_cards=limit, show_caption=False)
 
 
 def get_app_build_id() -> str:
@@ -830,10 +815,10 @@ def to_csv_bytes(df: pd.DataFrame) -> bytes:
 
 
 def to_excel_bytes(df: pd.DataFrame) -> bytes:
-    buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Dados")
-    return buf.getvalue()
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Relatorio")
+    return buffer.getvalue()
 
 
 def build_open_calls_by_quadro_export(df_open: pd.DataFrame) -> pd.DataFrame:
@@ -941,6 +926,7 @@ def to_executive_pdf_bytes(
                     ("RIGHTPADDING", (0, 0), (-1, -1), 3),
                     ("TOPPADDING", (0, 0), (-1, -1), 2),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fbff")]),
                 ]
             )
         )
@@ -1327,7 +1313,7 @@ def send_email_report(
     html_body = f"""
     <div style="font-family:Arial,sans-serif;max-width:720px;margin:0 auto">
         <div style="background:linear-gradient(135deg,#0A8B8D,#067375);padding:18px 20px;border-radius:8px 8px 0 0">
-            <h1 style="color:#fff;margin:0;font-size:20px">DASA — Engenharia Clinica</h1>
+            <h1 style="color:#fff;margin:0;font-size:20px">DASA</h1>
             <p style="color:#d0f0f0;margin:4px 0 0;font-size:13px">Relatorio de Chamados</p>
         </div>
         <div style="padding:16px 20px;background:#f9f9f9;border:1px solid #e0e0e0;border-top:0;border-radius:0 0 8px 8px">
@@ -1469,8 +1455,6 @@ def main() -> None:
             st.session_state["regiao_filter"] = "TODAS"
         if st.session_state["regiao_filter"] not in regiao_options:
             st.session_state["regiao_filter"] = "TODAS"
-        if "quadro_filter" not in st.session_state:
-            st.session_state["quadro_filter"] = []
         if "solicitante_filter" not in st.session_state:
             st.session_state["solicitante_filter"] = []
         if "criticidade_filter" not in st.session_state:
@@ -1483,11 +1467,8 @@ def main() -> None:
             st.session_state["tag_search_filter"] = ""
         if "tag_search_suggestion" not in st.session_state:
             st.session_state["tag_search_suggestion"] = ""
-        if not isinstance(st.session_state["quadro_filter"], list):
-            st.session_state["quadro_filter"] = []
         if not isinstance(st.session_state["solicitante_filter"], list):
             st.session_state["solicitante_filter"] = []
-        st.session_state["quadro_filter"] = [q for q in st.session_state["quadro_filter"] if q in quadro_options]
         st.session_state["solicitante_filter"] = [s for s in st.session_state["solicitante_filter"] if s in solicitante_options]
         if st.session_state["tipo_servico_filter"] not in tipo_servico_options:
             st.session_state["tipo_servico_filter"] = "TODOS"
@@ -1575,67 +1556,6 @@ def main() -> None:
 
             st.session_state["solicitante_filter"] = selected_solicitantes if qtd_sel < len(solicitante_options) else []
 
-        # ── Secao 2: Quadro de Trabalho ──
-        with st.expander(":clipboard: Quadro de Trabalho", expanded=False):
-            quadro_search = st.text_input(
-                "Buscar quadro",
-                key="quadro_search",
-                placeholder="Digite para filtrar...",
-                label_visibility="collapsed",
-            )
-            quadro_search_norm = normalize_scalar_text(quadro_search) if quadro_search else ""
-            quadro_visible = [q for q in quadro_options if quadro_search_norm in normalize_scalar_text(q)] if quadro_search_norm else quadro_options
-
-            # Quando ha busca ativa, marca apenas os visiveis e desmarca o resto
-            if quadro_search_norm:
-                prev_search = st.session_state.get("_prev_quadro_search", "")
-                if quadro_search_norm != prev_search:
-                    for q in quadro_options:
-                        st.session_state[f"chk_quadro_{q}"] = q in quadro_visible
-                    st.session_state["_prev_quadro_search"] = quadro_search_norm
-                    st.rerun()
-            else:
-                if st.session_state.get("_prev_quadro_search", ""):
-                    st.session_state["_prev_quadro_search"] = ""
-
-            bcol1, bcol2 = st.columns(2)
-            if bcol1.button("Todos", key="btn_quadro_all", use_container_width=True):
-                for q in quadro_visible:
-                    st.session_state[f"chk_quadro_{q}"] = True
-                st.rerun()
-            if bcol2.button("Nenhum", key="btn_quadro_clear", use_container_width=True):
-                for q in quadro_visible:
-                    st.session_state[f"chk_quadro_{q}"] = False
-                st.rerun()
-
-            # Container com scroll para a lista de checkboxes
-            chk_container = st.container(height=300)
-
-            selected_quadros = []
-            with chk_container:
-                for q in quadro_visible:
-                    key = f"chk_quadro_{q}"
-                    if key not in st.session_state:
-                        st.session_state[key] = not quadro_search_norm
-                    if st.checkbox(q, key=key):
-                        selected_quadros.append(q)
-            # Quadros fora da busca: so incluir se marcados E sem busca ativa
-            for q in quadro_options:
-                if q not in quadro_visible:
-                    key = f"chk_quadro_{q}"
-                    if not quadro_search_norm and st.session_state.get(key, True):
-                        selected_quadros.append(q)
-
-            qtd_sel_q = len(selected_quadros)
-            if qtd_sel_q == 0 or qtd_sel_q == len(quadro_options):
-                st.caption(f":white_check_mark: Todos os quadros ({len(quadro_options)})")
-            else:
-                st.caption(f":dart: {qtd_sel_q} de {len(quadro_options)} quadro(s)")
-            if quadro_search_norm:
-                st.caption(f":mag: Filtrando: apenas {len(quadro_visible)} quadro(s) correspondente(s)")
-
-            st.session_state["quadro_filter"] = selected_quadros if qtd_sel_q < len(quadro_options) else []
-
         # ── Secao 3: Tipo de Servico ──
         with st.expander(":wrench: Tipo de Servico", expanded=False):
             st.radio(
@@ -1713,18 +1633,13 @@ def main() -> None:
         # ── Botao Limpar Tudo ──
         if st.button(":wastebasket: Limpar todos os filtros", use_container_width=True, type="secondary"):
             st.session_state["solicitante_filter"] = []
-            st.session_state["quadro_filter"] = []
             st.session_state["tipo_servico_filter"] = "TODOS"
             st.session_state["tag_search_filter"] = ""
             st.session_state["tag_search_suggestion"] = ""
             st.session_state["solicitante_search"] = ""
             st.session_state["_prev_solicitante_search"] = ""
-            st.session_state["quadro_search"] = ""
-            st.session_state["_prev_quadro_search"] = ""
             for s in solicitante_options:
                 st.session_state[f"chk_solicitante_{s}"] = True
-            for q in quadro_options:
-                st.session_state[f"chk_quadro_{q}"] = True
             if min_data and max_data:
                 st.session_state["data_inicial"] = min_data
                 st.session_state["data_final"] = max_data
@@ -1736,8 +1651,7 @@ def main() -> None:
         solicitante_filter_selected = st.session_state.get("solicitante_filter", [])
         solicitante_filter = solicitante_options.copy() if not solicitante_filter_selected else solicitante_filter_selected
 
-        quadro_filter_selected = st.session_state.get("quadro_filter", [])
-        quadro_filter = quadro_options.copy() if not quadro_filter_selected else quadro_filter_selected
+        quadro_filter = []
 
         tipo_servico_filter = st.session_state.get("tipo_servico_filter", "TODOS")
         tag_search_filter = st.session_state.get("tag_search_filter", "")
@@ -1759,7 +1673,6 @@ def main() -> None:
     # Evita manter selecoes antigas de grafico quando filtros mudam.
     filter_state = (
         tuple(sorted(solicitante_filter)),
-        tuple(sorted(quadro_filter)),
         tipo_servico_filter,
         data_inicial,
         data_final,
@@ -1769,7 +1682,6 @@ def main() -> None:
     # Indicador global de filtros aplicados
     filtros_ativos_count = sum([
         bool(solicitante_filter and len(solicitante_filter) < len(solicitante_options)),
-        bool(quadro_filter and len(quadro_filter) < len(quadro_options)),
         bool(tipo_servico_filter != "TODOS"),
         bool(tag_search_filter.strip() != ""),
         bool(data_inicial != min_data if data_inicial and min_data else False),
@@ -2061,14 +1973,6 @@ def main() -> None:
     with tab2:
         st.subheader("Relatorio de Chamados Abertos")
         open_df = open_calls_table(filtered)
-        open_by_quadro_df = build_open_calls_by_quadro_export(open_df)
-
-        pdf_quadro_error = None
-        pdf_quadro_bytes: bytes | None = None
-        try:
-            pdf_quadro_bytes = to_open_calls_by_quadro_pdf_bytes(open_df, filtros_texto=filtros_texto_pdf)
-        except RuntimeError as exc:
-            pdf_quadro_error = str(exc)
 
         total_abertos = int(len(open_df))
         media_parado = int(open_df["Dias Parado"].mean()) if not open_df.empty else 0
@@ -2094,57 +1998,14 @@ def main() -> None:
             use_container_width=True,
         )
         d2.download_button(
-            label="Baixar relatorio por quadro de trabalho (CSV)",
-            data=to_csv_bytes(open_by_quadro_df),
-            file_name="relatorio_abertos_por_quadro.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-
-        d3, d4 = st.columns(2)
-        d3.download_button(
             label="Baixar relatorio de abertos (Excel)",
             data=to_excel_bytes(open_df),
             file_name="relatorio_chamados_abertos.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
-        d4.download_button(
-            label="Baixar relatorio por quadro (Excel)",
-            data=to_excel_bytes(open_by_quadro_df),
-            file_name="relatorio_abertos_por_quadro.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-
-        if pdf_quadro_bytes is not None:
-            st.download_button(
-                label="Baixar relatorio por quadro de trabalho (PDF)",
-                data=pdf_quadro_bytes,
-                file_name=f"relatorio_abertos_por_quadro_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-            )
-        elif pdf_quadro_error:
-            st.info(pdf_quadro_error)
 
         # ── Envio de e-mail ──
-        # Mapeamento automatico: padrao no nome do quadro → destinatarios
-        _EMAIL_MAP = {
-            "D969": "bruno.barbosa@dasa.com.br, yasmim.maria@dasa.com.br, claudemir.cruz@dasa.com.br, manfred.rees@dasa.com.br, daniele.aguiar@dasa.com.br, suzy.santos@dasa.com.br",
-        }
-
-        def _resolve_default_dest(quadros: list[str]) -> str:
-            """Retorna destinatarios pre-preenchidos com base nos quadros filtrados."""
-            emails: list[str] = []
-            for pattern, addr in _EMAIL_MAP.items():
-                if any(pattern.upper() in q.upper() for q in quadros):
-                    if addr not in emails:
-                        emails.append(addr)
-            return ", ".join(emails)
-
-        default_dest = _resolve_default_dest(quadro_filter)
-
         with st.expander("Enviar relatorio por e-mail", expanded=False, icon="📧"):
             email_cfg = _get_email_config()
             if email_cfg is None:
@@ -2152,80 +2013,31 @@ def main() -> None:
                     "<p style='font-size:0.88rem;color:#555'>Configure as credenciais SMTP para habilitar o envio.</p>",
                     unsafe_allow_html=True,
                 )
-                c1, c2 = st.columns(2)
-                _smtp_sender = c1.text_input("E-mail remetente", placeholder="bot@gmail.com", key="_smtp_sender")
-                _smtp_pass = c2.text_input("Senha de App", type="password", key="_smtp_pass")
-                if st.button("Salvar credenciais", key="btn_save_smtp", use_container_width=True):
-                    if _smtp_sender and _smtp_pass:
-                        st.session_state["_email_cfg_manual"] = {
-                            "smtp_server": "smtp.gmail.com",
-                            "smtp_port": 587,
-                            "sender": _smtp_sender.strip(),
-                            "app_password": _smtp_pass.strip(),
-                        }
-                        st.rerun()
-                    else:
-                        st.warning("Preencha ambos os campos.")
             else:
-                st.markdown(
-                    "<p style='font-size:0.88rem;color:#555'>Envie o relatorio como imagens das "
-                    "paginas do PDF diretamente no corpo do e-mail.</p>",
-                    unsafe_allow_html=True,
-                )
-                if "email_destinatarios" not in st.session_state and default_dest:
-                    st.session_state["email_destinatarios"] = default_dest
                 dest_input = st.text_input(
                     "Destinatarios",
                     placeholder="email1@exemplo.com, email2@exemplo.com",
                     key="email_destinatarios",
-                    help="Separe multiplos e-mails por virgula. Apague e digite novos se quiser enviar para outros.",
+                    help="Separe multiplos e-mails por virgula.",
                 )
 
                 if st.button("Enviar e-mail", type="primary", use_container_width=True, key="btn_send_email"):
-                    final_dest = dest_input.strip() if dest_input.strip() else default_dest
-                    destinatarios = [d.strip() for d in final_dest.split(",") if d.strip() and "@" in d]
+                    destinatarios = [d.strip() for d in dest_input.split(",") if d.strip() and "@" in d]
                     if not destinatarios:
                         st.warning("Informe ao menos um e-mail valido.")
-                    elif pdf_quadro_bytes is None:
-                        st.warning("PDF do relatorio nao disponivel. Verifique se ha chamados abertos.")
                     else:
-                        with st.spinner("Enviando..."):
-                            ts = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M")
-                            assunto = f"DASA Eng. Clinica — Relatorio ({ts})"
-                            result = send_email_report(destinatarios, assunto, pdf_quadro_bytes)
-                            if result == "ok":
-                                st.success(f"E-mail enviado para {', '.join(destinatarios)}")
-                            else:
-                                st.error(result)
+                        st.info("Envio de e-mail desabilitado para este relatorio.")
 
         with st.expander("Visualizacao em cartoes", expanded=False):
-            modo_cartoes = st.radio(
-                "Organizacao dos cartoes",
-                options=["Todos os chamados", "Por quadro de trabalho"],
-                horizontal=True,
-                key="cards_mode",
+            qtd_cards = st.slider(
+                "Quantidade de cartoes para visualizar",
+                min_value=5,
+                max_value=100,
+                value=20,
+                step=5,
+                key="cards_total_limit",
             )
-
-            if modo_cartoes == "Todos os chamados":
-                qtd_cards = st.slider(
-                    "Quantidade de cartoes para visualizar",
-                    min_value=5,
-                    max_value=100,
-                    value=20,
-                    step=5,
-                    key="cards_total_limit",
-                )
-                render_open_call_cards(open_df, qtd_cards)
-            else:
-                qtd_cards_quadro = st.slider(
-                    "Quantidade maxima de cartoes por quadro",
-                    min_value=3,
-                    max_value=50,
-                    value=10,
-                    step=1,
-                    key="cards_quadro_limit",
-                )
-                render_open_call_cards_by_quadro(open_df, qtd_cards_quadro)
+            render_open_call_cards(open_df, qtd_cards)
 
     with tab3:
         render_mtbf_section(filtered)
@@ -2444,17 +2256,6 @@ def main() -> None:
         # ── Resumo Executivo ──
         st.markdown("### Resumo Executivo")
         st.markdown(diag["resumo_executivo"])
-
-        st.markdown("---")
-
-        # ── Quadros Sobrecarregados ──
-        st.markdown("### Quadros Mais Sobrecarregados")
-        if diag["quadros_ranking"]:
-            qr_df = pd.DataFrame(diag["quadros_ranking"])
-            qr_df.columns = ["Quadro", "Abertos", "Media Dias", "Alta Crit."]
-            st.dataframe(qr_df, use_container_width=True, hide_index=True)
-        else:
-            st.info("Nenhum quadro com chamados abertos.")
 
         st.markdown("---")
 
