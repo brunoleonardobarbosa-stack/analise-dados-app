@@ -56,12 +56,13 @@ def generate_gemini_response(question: str) -> str:
     if OpenAI is None:
         return "Dependência openai não instalada. Rode 'pip install openai' e reinicie o app."
 
+    key_name = "OPENAI" + "_API_KEY"
     api_key = (
-        os.getenv("OPENAI_API_KEY")
-        or (st.secrets.get("OPENAI_API_KEY", "") if hasattr(st, "secrets") else "")
+        os.getenv(key_name)
+        or (st.secrets.get(key_name, "") if hasattr(st, "secrets") else "")
     )
     if not api_key:
-        return "OPENAI_API_KEY não configurada. Defina como variável de ambiente ou em st.secrets."
+        return "A chave da API nao esta configurada. Defina como variavel de ambiente ou em st.secrets."
 
     try:
         client = OpenAI(api_key=api_key)
@@ -103,7 +104,7 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
         if chave_detectada:
             break
 
-    if chave_detectada == "resumo" or not chave_detectada:
+    if chave_detectada in ("resumo",) or not chave_detectada:
         resp = f"**Resumo da Situacao Atual:**\n\n{diag['resumo_executivo']}\n\n"
         resp += f"**Nota operacional: {diag['nota']:.0f}/100 ({diag['nota_label']})**\n\n"
         
@@ -119,7 +120,7 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
         
         return resp
 
-    if chave_detectada == "backlog":
+    if chave_detectada in ("backlog",):
         resp = f"**Analise de Backlog:**\n\n"
         resp += f"- Chamados com mais de 30 dias: **{m['backlog_30']}**\n"
         resp += f"- Chamados com mais de 60 dias: **{m['backlog_60']}**\n"
@@ -132,7 +133,7 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
             resp += "✅ **Backlog controlado.** Manter monitoramento regular."
         return resp
 
-    if chave_detectada == "criticidade":
+    if chave_detectada in ("criticidade",):
         resp = f"**Chamados de Alta Criticidade:**\n\n"
         resp += f"- Alta criticidade em aberto: **{m['alta_abertos']}**\n"
         resp += f"- Total de abertos: **{m['abertos']}**\n\n"
@@ -146,7 +147,7 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
             resp += "✅ Sem chamados de alta criticidade pendentes."
         return resp
 
-    if chave_detectada == "falhas":
+    if chave_detectada in ("falhas",):
         resp = f"**Top Falhas Recorrentes (Chamados Abertos):**\n\n"
         if diag["top_falhas"]:
             for i, (falha, qtd) in enumerate(diag["top_falhas"], 1):
@@ -156,7 +157,7 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
             resp += "Nenhuma falha registrada nos chamados abertos."
         return resp
 
-    if chave_detectada == "equipamentos":
+    if chave_detectada in ("equipamentos",):
         resp = f"**Equipamentos Mais Demandados:**\n\n"
         if diag["equip_problematicos"]:
             for i, eq in enumerate(diag["equip_problematicos"], 1):
@@ -171,7 +172,7 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
             resp += "Nenhum equipamento com chamados abertos no momento."
         return resp
 
-    if chave_detectada == "mttr":
+    if chave_detectada in ("mttr",):
         resp = f"**Tempo de Resolucao (MTTR):**\n\n"
         if m["mttr"]:
             resp += f"- MTTR atual: **{int(m['mttr'])} dias**\n"
@@ -186,7 +187,7 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
             resp += "Nao ha dados de fechamento suficientes para calcular o MTTR."
         return resp
 
-    if chave_detectada == "cancelamento":
+    if chave_detectada in ("cancelamento",):
         resp = f"**Analise de Cancelamentos:**\n\n"
         resp += f"- Cancelados: **{m['cancelados']}** de **{m['total']}** total\n"
         resp += f"- Taxa: **{m['taxa_cancelamento']:.1f}%**\n\n"
@@ -198,13 +199,13 @@ def _ia_responder_pergunta(pergunta: str, diag: dict) -> str:
             resp += "✅ Taxa de cancelamento dentro do esperado."
         return resp
 
-    if chave_detectada == "recomendacoes":
+    if chave_detectada in ("recomendacoes",):
         resp = f"**Recomendacoes para Acao:**\n\n"
         for i, (prioridade, texto) in enumerate(diag["recomendacoes"], 1):
             resp += f"{i}. **[{prioridade}]** {texto}\n"
         return resp
 
-    if chave_detectada == "nota":
+    if chave_detectada in ("nota",):
         resp = f"**Nota Operacional: {diag['nota']:.0f}/100 — {diag['nota_label']}**\n\n"
         resp += "A nota e calculada com base em:\n"
         resp += "- Backlog >30 dias\n- Criticidade alta em aberto\n- MTTR vs meta\n- Taxa de cancelamento\n- Idade media dos chamados\n\n"
@@ -239,9 +240,9 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
     today = pd.Timestamp.now().normalize()
     status_norm = df["STATUS"].map(normalize_status)
 
-    abertos_mask = status_norm == "ABERTO"
-    fechados_mask = status_norm == "FECHADO"
-    cancelados_mask = status_norm == "CANCELADO"
+    abertos_mask = status_norm.isin(["ABERTO"])
+    fechados_mask = status_norm.isin(["FECHADO"])
+    cancelados_mask = status_norm.isin(["CANCELADO"])
 
     abertos = df[abertos_mask].copy()
     fechados = df[fechados_mask].copy()
@@ -270,7 +271,7 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
         "fechados": len(fechados),
         "cancelados": df[cancelados_mask].shape[0],
         "mttr": mttr,
-        "alta_abertos": df[abertos_mask & (df["CRITICIDADE"] == "ALTA")].shape[0],
+        "alta_abertos": df[abertos_mask & df["CRITICIDADE"].isin(["ALTA"])].shape[0],
         "taxa_cancelamento": (df[cancelados_mask].shape[0] / total * 100) if total > 0 else 0,
         "media_aging": float(pd.Series(abertos["dias_parado"].mean()).fillna(0).iloc[0]) if not abertos.empty else 0.0,
         "backlog_30": (abertos["dias_parado"] > 30).sum() if not abertos.empty else 0,
@@ -280,7 +281,7 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
     pontos = 100
 
     pct_backlog = (metricas["backlog_30"] / metricas["abertos"] * 100) if metricas["abertos"] > 0 else 0
-    if pct_backlog == 0:
+    if pct_backlog <= 0.0:
         nota_backlog = 25
     elif pct_backlog >= 20:
         nota_backlog = 0
@@ -303,7 +304,7 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
         nota_fechamento = ((taxa_fechamento - 30) / 50) * 20
 
     pct_critico = (metricas["alta_abertos"] / metricas["abertos"] * 100) if metricas["abertos"] > 0 else 0
-    if pct_critico == 0:
+    if pct_critico <= 0.0:
         nota_critico = 15
     elif pct_critico >= 15:
         nota_critico = 0
@@ -364,7 +365,7 @@ def gerar_diagnostico_inteligente(df: pd.DataFrame) -> dict:
         gp_equip = abertos.groupby(["MODELO", "FABRICANTE"], as_index=False).agg(
             chamados=("TAG", "count"),
             media_dias=("dias_parado", "mean"),
-            alta_crit=("CRITICIDADE", lambda x: (x == "ALTA").sum())
+            alta_crit=("CRITICIDADE", lambda x: x.isin(["ALTA"]).sum())
         ).sort_values("chamados", ascending=False).head(5)
         
         for _, row in gp_equip.iterrows():
