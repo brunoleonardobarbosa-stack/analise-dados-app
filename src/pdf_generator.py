@@ -93,7 +93,7 @@ if HAS_REPORTLAB:
 
 
     def gerar_relatorio_chamados_abertos_pdf(df: pd.DataFrame) -> bytes:
-        """Gera relatório PDF de chamados abertos com formatação profissional."""
+        """Gera relatório PDF de chamados abertos agrupados por Centro de Custo."""
         if df is None or df.empty:
             df = pd.DataFrame()
 
@@ -112,7 +112,7 @@ if HAS_REPORTLAB:
         s = build_styles()
 
         # Título principal
-        title = Paragraph("Relatório de Chamados Abertos", s["Title2"])
+        title = Paragraph("Relatório de Chamados Abertos por Centro de Custo", s["Title2"])
         elements.append(title)
         elements.append(Spacer(1, 0.3 * cm))
 
@@ -122,18 +122,57 @@ if HAS_REPORTLAB:
         elements.append(Paragraph(info_text, s["BodyCustom"]))
         elements.append(Spacer(1, 0.3 * cm))
 
-        # Tabela principal
-        if not df.empty:
-            header = [str(c) for c in df.columns.tolist()]
-            rows = df.fillna("-").astype(str).values.tolist()
+        if df.empty:
+            elements.append(Paragraph("Nenhum registro para exibir.", s["BodyCustom"]))
+        else:
+            # Detectar coluna de Centro de Custo
+            centro_custo_col = None
+            for col in df.columns:
+                col_lower = col.lower().replace(' ', '').replace('_', '')
+                if 'centrodecusto' in col_lower or 'centrodecu' in col_lower or 'cc' in col_lower:
+                    centro_custo_col = col
+                    break
             
-            # Calcular largura das colunas (distribuir igualmente)
-            available_width = 25.6 * cm  # landscape A4 - margens
-            col_width = available_width / len(header)
-            col_widths = [col_width] * len(header)
-            
-            table = styled_table(header, rows, col_widths)
-            elements.append(table)
+            if centro_custo_col is None:
+                # Se não houver coluna de Centro de Custo, exibir tabela única
+                header = [str(c) for c in df.columns.tolist()]
+                rows = df.fillna("-").astype(str).values.tolist()
+                
+                available_width = 25.6 * cm
+                col_width = available_width / len(header)
+                col_widths = [col_width] * len(header)
+                
+                table = styled_table(header, rows, col_widths)
+                elements.append(table)
+            else:
+                # Agrupar por Centro de Custo
+                grouped = df.groupby(centro_custo_col, sort=False)
+                
+                first_group = True
+                for centro, group_df in grouped:
+                    if not first_group:
+                        elements.append(PageBreak())
+                    first_group = False
+                    
+                    # Título do grupo
+                    group_title = Paragraph(
+                        f"<b>Centro de Custo: {centro}</b> ({len(group_df)} chamado{'s' if len(group_df) > 1 else ''})",
+                        s["H2Custom"]
+                    )
+                    elements.append(group_title)
+                    elements.append(Spacer(1, 0.2 * cm))
+                    
+                    # Tabela do grupo
+                    header = [str(c) for c in group_df.columns.tolist()]
+                    rows = group_df.fillna("-").astype(str).values.tolist()
+                    
+                    available_width = 25.6 * cm
+                    col_width = available_width / len(header)
+                    col_widths = [col_width] * len(header)
+                    
+                    table = styled_table(header, rows, col_widths)
+                    elements.append(table)
+                    elements.append(Spacer(1, 0.3 * cm))
 
         doc.build(elements)
         pdf_bytes = buffer.getvalue()
