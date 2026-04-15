@@ -23,34 +23,48 @@ if HAS_REPORTLAB:
         s = getSampleStyleSheet()
         s.add(ParagraphStyle(
             "TableHeader", parent=s["Normal"],
-            fontSize=9, leading=11, textColor=white,
+            fontSize=8, leading=10, textColor=white,
             alignment=TA_CENTER, fontName="Helvetica-Bold",
+            wordWrap='LTR', splitLongWords=True,
         ))
         s.add(ParagraphStyle(
             "TableCell", parent=s["Normal"],
-            fontSize=8.5, leading=11, textColor=DARK,
+            fontSize=7, leading=9, textColor=DARK,
             alignment=TA_LEFT, fontName="Helvetica",
+            wordWrap='LTR', splitLongWords=True,
         ))
-        data = [[Paragraph(h, s["TableHeader"]) for h in header]]
+        
+        # Truncar texto muito longo
+        max_cell_length = 50
+        header_truncated = [str(h)[:max_cell_length] for h in header]
+        data = [[Paragraph(h, s["TableHeader"]) for h in header_truncated]]
         for row in rows:
-            data.append([Paragraph(str(c), s["TableCell"]) for c in row])
+            truncated_row = [str(c)[:max_cell_length] for c in row]
+            data.append([Paragraph(t, s["TableCell"]) for t in truncated_row])
 
-        t = Table(data, colWidths=col_widths, repeatRows=1)
+        # Calcular larguras automáticas se não fornecidas
+        if col_widths is None:
+            # Largura disponível em landscape: ~280mm - margens 3mm = 274mm
+            available_width = 274 * 0.28 * 100 / 2.54  # converter para pontos
+            num_cols = len(header)
+            col_widths = [available_width / num_cols] * num_cols
+
+        t = Table(data, colWidths=col_widths, repeatRows=1, splitByRow=1)
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), TEAL),
             ("TEXTCOLOR", (0, 0), (-1, 0), white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 9),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
-            ("TOPPADDING", (0, 0), (-1, 0), 6),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+            ("TOPPADDING", (0, 0), (-1, 0), 4),
             ("BACKGROUND", (0, 1), (-1, -1), white),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [white, TEAL_PALE]),
             ("GRID", (0, 0), (-1, -1), 0.4, HexColor("#CCCCCC")),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 1), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 1), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+            ("TOPPADDING", (0, 1), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 1), (-1, -1), 2),
         ]))
         return t
 
