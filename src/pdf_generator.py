@@ -73,17 +73,49 @@ if HAS_REPORTLAB:
         elements = []
         styles = getSampleStyleSheet()
 
-        title = Paragraph("Relatório de Chamados Abertos", styles.get('Title', styles['Normal']))
+        title = Paragraph("Relatório de Chamados Abertos por Solicitante", styles.get('Title', styles['Normal']))
         elements.append(title)
         elements.append(Spacer(1, 0.5 * cm))
 
-        # Preparar dados para a tabela
-        header = [str(c) for c in df.columns.tolist()]
-        rows = df.fillna("-").astype(str).values.tolist()
-
-        # Adicionar tabela
-        table = styled_table(header, rows)
-        elements.append(table)
+        from reportlab.platypus import PageBreak
+        
+        # Verificar se existe coluna Solicitante
+        solicitante_col = None
+        for col in df.columns:
+            if 'solicitante' in col.lower():
+                solicitante_col = col
+                break
+        
+        if solicitante_col is None:
+            # Se não houver coluna solicitante, usar tabela única
+            header = [str(c) for c in df.columns.tolist()]
+            rows = df.fillna("-").astype(str).values.tolist()
+            table = styled_table(header, rows)
+            elements.append(table)
+        else:
+            # Agrupar por solicitante
+            grouped = df.groupby(solicitante_col, sort=False)
+            
+            first_group = True
+            for solicitante, group_df in grouped:
+                if not first_group:
+                    elements.append(PageBreak())
+                first_group = False
+                
+                # Título do grupo
+                subtitle = Paragraph(
+                    f"<b>Solicitante: {solicitante}</b> ({len(group_df)} chamado{'s' if len(group_df) > 1 else ''})",
+                    styles.get('Heading2', styles['Normal'])
+                )
+                elements.append(subtitle)
+                elements.append(Spacer(1, 0.3 * cm))
+                
+                # Tabela do grupo
+                header = [str(c) for c in group_df.columns.tolist()]
+                rows = group_df.fillna("-").astype(str).values.tolist()
+                table = styled_table(header, rows)
+                elements.append(table)
+                elements.append(Spacer(1, 0.5 * cm))
 
         doc.build(elements)
         pdf_bytes = buffer.getvalue()
