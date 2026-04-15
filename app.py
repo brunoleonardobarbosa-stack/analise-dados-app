@@ -39,6 +39,7 @@ from src.ui_components import (
     DASA_PLOTLY_LAYOUT, apply_dasa_plotly_theme, apply_executive_styles,
     render_kpi_cards
 )
+from src.pdf_generator import gerar_relatorio_chamados_abertos_pdf
 
 
 try:
@@ -1989,7 +1990,7 @@ def main() -> None:
         st.markdown("### Lista Operacional")
         st.dataframe(open_df, use_container_width=True, hide_index=True)
 
-        d1, d2 = st.columns(2)
+        d1, d2, d3 = st.columns(3)
         d1.download_button(
             label="Baixar relatorio de abertos (CSV)",
             data=to_csv_bytes(open_df),
@@ -2004,6 +2005,22 @@ def main() -> None:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
+
+        # PDF export
+        if HAS_REPORTLAB:
+            try:
+                pdf_bytes = gerar_relatorio_chamados_abertos_pdf(open_df)
+                d3.download_button(
+                    label="Baixar relatorio de abertos (PDF)",
+                    data=pdf_bytes,
+                    file_name=f"relatorio_chamados_abertos_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+            except Exception as exc:
+                d3.info(str(exc))
+        else:
+            d3.info("Instale reportlab para habilitar exportacao PDF (pip install reportlab)")
 
         # ── Envio de e-mail ──
         with st.expander("Enviar relatorio por e-mail", expanded=False, icon="📧"):
