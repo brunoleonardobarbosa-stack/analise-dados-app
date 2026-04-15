@@ -6,8 +6,8 @@ try:
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm
     from reportlab.lib.colors import HexColor, white
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
     HAS_REPORTLAB = True
 except Exception:
     HAS_REPORTLAB = False
@@ -15,39 +15,62 @@ except Exception:
 
 if HAS_REPORTLAB:
     TEAL = HexColor("#0A8B8D")
+    TEAL_LIGHT = HexColor("#14A3A5")
     TEAL_PALE = HexColor("#E6F5F5")
     DARK = HexColor("#1a1a2e")
+    GRAY = HexColor("#555555")
 
-    def styled_table(header, rows, col_widths=None):
-        """Cria tabela estilizada com header teal."""
-        s = getSampleStyleSheet()
-        s.add(ParagraphStyle(
-            "TableHeader", parent=s["Normal"],
+    def build_styles():
+        """Cria estilos customizados para o PDF."""
+        ss = getSampleStyleSheet()
+        
+        ss.add(ParagraphStyle(
+            "Title2", parent=ss["Title"],
+            fontSize=20, leading=24, textColor=TEAL,
+            alignment=TA_CENTER, spaceAfter=12,
+            fontName="Helvetica-Bold",
+        ))
+        ss.add(ParagraphStyle(
+            "H1Custom", parent=ss["Heading1"],
+            fontSize=16, leading=19, textColor=TEAL,
+            spaceBefore=12, spaceAfter=8,
+            fontName="Helvetica-Bold",
+        ))
+        ss.add(ParagraphStyle(
+            "H2Custom", parent=ss["Heading2"],
+            fontSize=12, leading=15, textColor=DARK,
+            spaceBefore=10, spaceAfter=6,
+            fontName="Helvetica-Bold",
+        ))
+        ss.add(ParagraphStyle(
+            "BodyCustom", parent=ss["Normal"],
+            fontSize=9, leading=12, textColor=DARK,
+            alignment=TA_JUSTIFY, spaceAfter=6,
+            fontName="Helvetica",
+        ))
+        ss.add(ParagraphStyle(
+            "TableHeader", parent=ss["Normal"],
             fontSize=8, leading=10, textColor=white,
             alignment=TA_CENTER, fontName="Helvetica-Bold",
-            wordWrap='LTR', splitLongWords=True,
         ))
-        s.add(ParagraphStyle(
-            "TableCell", parent=s["Normal"],
-            fontSize=7, leading=9, textColor=DARK,
+        ss.add(ParagraphStyle(
+            "TableCell", parent=ss["Normal"],
+            fontSize=7.5, leading=9, textColor=DARK,
             alignment=TA_LEFT, fontName="Helvetica",
-            wordWrap='LTR', splitLongWords=True,
         ))
-        
-        # Truncar texto muito longo
-        max_cell_length = 50
-        header_truncated = [str(h)[:max_cell_length] for h in header]
-        data = [[Paragraph(h, s["TableHeader"]) for h in header_truncated]]
-        for row in rows:
-            truncated_row = [str(c)[:max_cell_length] for c in row]
-            data.append([Paragraph(t, s["TableCell"]) for t in truncated_row])
+        return ss
 
-        # Calcular larguras automáticas se não fornecidas
-        if col_widths is None:
-            # Largura disponível em landscape: ~280mm - margens 3mm = 274mm
-            available_width = 274 * 0.28 * 100 / 2.54  # converter para pontos
-            num_cols = len(header)
-            col_widths = [available_width / num_cols] * num_cols
+    def styled_table(header, rows, col_widths=None, max_rows=None):
+        """Cria tabela estilizada com header teal e múltiplas páginas se necessário."""
+        s = build_styles()
+        
+        # Limitar linhas se necessário
+        if max_rows and len(rows) > max_rows:
+            rows = rows[:max_rows]
+        
+        data = [[Paragraph(str(h), s["TableHeader"]) for h in header]]
+        for row in rows:
+            data.append([Paragraph(str(c)[:40], s["TableCell"]) for c in row])
 
         t = Table(data, colWidths=col_widths, repeatRows=1, splitByRow=1)
         t.setStyle(TableStyle([
@@ -55,49 +78,62 @@ if HAS_REPORTLAB:
             ("TEXTCOLOR", (0, 0), (-1, 0), white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, 0), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
-            ("TOPPADDING", (0, 0), (-1, 0), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
+            ("TOPPADDING", (0, 0), (-1, 0), 5),
             ("BACKGROUND", (0, 1), (-1, -1), white),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [white, TEAL_PALE]),
             ("GRID", (0, 0), (-1, -1), 0.4, HexColor("#CCCCCC")),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 3),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-            ("TOPPADDING", (0, 1), (-1, -1), 2),
-            ("BOTTOMPADDING", (0, 1), (-1, -1), 2),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 1), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 1), (-1, -1), 3),
         ]))
         return t
 
 
     def gerar_relatorio_chamados_abertos_pdf(df: pd.DataFrame) -> bytes:
-        if df is None:
+        """Gera relatório PDF de chamados abertos com formatação profissional."""
+        if df is None or df.empty:
             df = pd.DataFrame()
 
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer,
             pagesize=landscape(A4),
-            leftMargin=1.5 * cm,
-            rightMargin=1.5 * cm,
+            leftMargin=1.2 * cm,
+            rightMargin=1.2 * cm,
             topMargin=1.5 * cm,
             bottomMargin=1.5 * cm,
             title="Relatório de Chamados Abertos",
         )
 
         elements = []
-        styles = getSampleStyleSheet()
+        s = build_styles()
 
-        title = Paragraph("Relatório de Chamados Abertos", styles.get('Title', styles['Normal']))
+        # Título principal
+        title = Paragraph("Relatório de Chamados Abertos", s["Title2"])
         elements.append(title)
-        elements.append(Spacer(1, 0.5 * cm))
+        elements.append(Spacer(1, 0.3 * cm))
 
-        # Preparar dados para a tabela
-        header = [str(c) for c in df.columns.tolist()]
-        rows = df.fillna("-").astype(str).values.tolist()
+        # Informações gerais
+        total = len(df) if not df.empty else 0
+        info_text = f"Total de Registros: <b>{total}</b>"
+        elements.append(Paragraph(info_text, s["BodyCustom"]))
+        elements.append(Spacer(1, 0.3 * cm))
 
-        # Adicionar tabela
-        table = styled_table(header, rows)
-        elements.append(table)
+        # Tabela principal
+        if not df.empty:
+            header = [str(c) for c in df.columns.tolist()]
+            rows = df.fillna("-").astype(str).values.tolist()
+            
+            # Calcular largura das colunas (distribuir igualmente)
+            available_width = 25.6 * cm  # landscape A4 - margens
+            col_width = available_width / len(header)
+            col_widths = [col_width] * len(header)
+            
+            table = styled_table(header, rows, col_widths)
+            elements.append(table)
 
         doc.build(elements)
         pdf_bytes = buffer.getvalue()
